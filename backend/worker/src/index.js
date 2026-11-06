@@ -37,6 +37,9 @@ function corsHeaders(request, env) {
 }
 
 function withCors(response, request, env) {
+  // Cloudflare's WebSocket 101 response must be returned intact; the standard
+  // Response constructor cannot recreate a 101 response or preserve its socket.
+  if (response.webSocket) return response;
   const headers = new Headers(response.headers);
   for (const [key, value] of Object.entries(corsHeaders(request, env))) headers.set(key, value);
   return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
@@ -129,7 +132,7 @@ async function workshopItem(request, env, id, action) {
     const headers = new Headers();
     asset.writeHttpMetadata(headers);
     headers.set("content-length", String(asset.size));
-    headers.set("content-disposition", `attachment; filename="${metadata.fileName.replace(/["\\\\]/g, "_")}"`);
+    headers.set("content-disposition", `attachment; filename="${metadata.fileName.replace(/["\\\\\\r\\n]/g, "_")}"`);
     headers.set("x-content-type-options", "nosniff");
     headers.set("cache-control", "public, max-age=300");
     return new Response(asset.body, { headers });
@@ -240,6 +243,7 @@ async function route(request, env) {
 
   const itemMatch = url.pathname.match(/^\/api\/workshop\/items\/([a-f0-9-]{36})(\/asset)?$/i);
   if (itemMatch && ["GET", "DELETE"].includes(request.method)) {
+    if (itemMatch[2] && request.method !== "GET") return json({ error: "Method not allowed." }, 405);
     if (!env.WORKSHOP_BUCKET) return json({ error: "Workshop storage is not configured." }, 503);
     return workshopItem(request, env, itemMatch[1], itemMatch[2] ? "asset" : "metadata");
   }
