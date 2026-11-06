@@ -23,7 +23,7 @@ Sandbox Protocol is a browser-based 3D sandbox project with physics, props, play
 - AI characters with configurable provider/persona settings
 - In-game menus and settings
 - Touch-oriented controls (Android)
-- Experimental local JSON mod loader for custom procedural physics props
+- Experimental local mod manager and developer-only StarCoder2 AI Mod Studio
 
 Workshop/community sharing and multiplayer are **not confirmed as implemented** in the current source. Please do not assume they are available.
 
