@@ -34,7 +34,7 @@ function start(){
   const prompt=$("msPrompt").value.trim(),baseUrl=$("msUrl").value.trim(),model=$("msModel").value.trim();
   if(!prompt){status("Describe the mod first.");return}if(!baseUrl||!model){status("Enter the local endpoint and exact model name.");return}
   const btn=$("msGenerate");btn.disabled=true;status("Preparing game knowledge and resource manifest...");
-  try{const [bootstrap,manifest]=await Promise.all([knowledgePromise,resources()]),sourceContext=window.SandboxGameSourceIndex?window.SandboxGameSourceIndex.search(prompt,8).join("\n\n"):"",knowledge=[bootstrap,sourceContext].join("\n\n").slice(0,48000),userPrompt=window.SandboxModStudio.buildModPrompt({prompt,knowledge,resources:manifest}),adapter=window.SandboxModStudio.createStarCoder2Adapter({baseUrl,model,maxTokens:4096});
+  try{const [bootstrap,manifest]=await Promise.all([knowledgePromise,resources()]),sourceContext=window.SandboxGameSourceIndex?window.SandboxGameSourceIndex.search(prompt,6).join("\n\n"):"",knowledge=[bootstrap,sourceContext].join("\n\n").slice(0,24000),userPrompt=window.SandboxModStudio.buildModPrompt({prompt,knowledge,resources:manifest}),adapter=window.SandboxModStudio.createStarCoder2Adapter({baseUrl,model,maxTokens:4096});
    status("Sending request to local StarCoder2 endpoint...");
    const result=await adapter.complete({messages:[{role:"user",content:userPrompt}]}),mod=window.SandboxModStudio.validateMod(parseObject(result.text));
    $("msOutput").value=JSON.stringify(mod,null,2);status("Generated and validated "+mod.name+" · "+mod.items.length+" item(s). Export the package, then import it through Mods.");
