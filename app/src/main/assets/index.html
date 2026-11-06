@@ -348,15 +348,20 @@ function renderLocalMods(){
 function openMods(){renderLocalMods();$('modsModal').hidden=false}
 $('bMods').onclick=openMods;$('modsClose').onclick=()=>$('modsModal').hidden=true;
 $('modsImport').onclick=()=>$('modsFile').click();
-$('modsFile').onchange=async e=>{
+$('modsFile').onchange=e=>{
   const file=e.target.files&&e.target.files[0];if(!file)return;
-  try{
-    if(file.size>256*1024)throw new Error('Mod JSON exceeds the 256 KiB limit.');
-    const raw=JSON.parse(await file.text()),mod=cleanMod(raw);
-    if(localMods.some(x=>x.mod.id===mod.id))throw new Error('A mod with this id is already installed. Remove it before importing an update.');
-    localMods.push({mod,enabled:true});saveLocalMods();renderLocalMods();toast('Installed local mod: '+mod.name);
-  }catch(err){toast('Mod import failed: '+(err&&err.message?err.message:'invalid file'))}
-  e.target.value='';
+  if(file.size>256*1024){toast('Mod import failed: file exceeds 256 KiB');e.target.value='';return}
+  const reader=new FileReader();
+  reader.onload=()=>{
+    try{
+      const raw=JSON.parse(String(reader.result||'')),mod=cleanMod(raw);
+      if(localMods.some(x=>x.mod.id===mod.id))throw new Error('A mod with this id is already installed. Remove it before importing an update.');
+      localMods.push({mod,enabled:true});saveLocalMods();renderLocalMods();toast('Installed local mod: '+mod.name);
+    }catch(err){toast('Mod import failed: '+(err&&err.message?err.message:'invalid file'))}
+    e.target.value='';
+  };
+  reader.onerror=()=>{toast('Could not read the selected mod file');e.target.value=''};
+  reader.readAsText(file);
 };
 $('modsTemplate').onclick=()=>{
   const sample={id:'my-first-mod',name:'My First Mod',version:'1.0.0',author:'Your name',
