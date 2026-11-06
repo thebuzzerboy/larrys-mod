@@ -27,9 +27,11 @@ Sandbox Protocol is a browser-based 3D sandbox project with physics, props, play
 
 Workshop/community sharing and multiplayer are **not confirmed as implemented** in the current source. Please do not assume they are available.
 
-## Experimental local mods
+## Experimental AI Mod Studio
 
-Open **Mods** in the game to import, enable, disable, and remove local JSON mods. Imported mods are stored in the current browser/WebView profile and can add procedural physics props using validated shapes, materials, and existing behavior presets. See [`docs/LOCAL_MODS.md`](docs/LOCAL_MODS.md) and [`mods/examples/neon-crate.json`](mods/examples/neon-crate.json) for the format and example. This first version does not execute mod JavaScript or load external model/texture/audio files.
+This developer-only branch adds an **AI Mod Studio** entry point. It connects to a separately running OpenAI-compatible local endpoint configured with StarCoder2, sends a reviewed game-knowledge bootstrap with each generation request, validates the returned mod JSON, and exports a package for import through **Mods**. StarCoder2 weights and an inference runtime are not bundled or automatically installed. Structured props are the default; optional JavaScript scripts run in an isolated iframe with a tiny experimental bridge (`api.log`, `api.spawn`). The script sandbox is not production-hardened and has no hard CPU quota.
+
+The resource picker recognizes GLB/GLTF/OBJ, PNG/JPG/WEBP, WAV/OGG/MP3, JSON, Markdown, text and source files. At this stage, imported resources are only catalogued by metadata and optional user notes; binary files are not passed to the model, stored in the mod, or rendered in-game. See [docs/AI_MOD_STUDIO.md](docs/AI_MOD_STUDIO.md), [docs/GAME_KNOWLEDGE.md](docs/GAME_KNOWLEDGE.md), and [docs/LOCAL_MODS.md](docs/LOCAL_MODS.md).
 
 ## Windows build (GitHub Actions)
 
