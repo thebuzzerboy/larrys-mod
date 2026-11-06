@@ -1,24 +1,69 @@
-# Larry's Mod — Android project
+# Sandbox Protocol
 
-This repository contains the gm_construct browser game and an Android WebView wrapper. The Android build bundles Three.js and Cannon.js locally during GitHub Actions, so the 3D engine itself does not need a network connection at runtime.
+**An open-ended 3D physics sandbox. Build, experiment, and play by your own rules.**
 
-## Build an APK with GitHub Actions
+Sandbox Protocol is a browser-based 3D sandbox project with physics, props, player mode, tools, and AI characters. This repository currently includes an Android WebView wrapper; a Windows desktop wrapper is being added to make it easier to capture real gameplay footage and test the game on PC.
 
-1. Create a GitHub repository and upload the contents of the `LarrysMod` folder inside this ZIP to the root of your GitHub repository (so `app/`, `build.gradle`, and `.github/` are at the repository root).
-2. Open **Actions** in GitHub.
-3. Select **Build Larry's Mod Android APK** and press **Run workflow** (or push to `main`/`master`).
-4. Open the completed workflow run and download the `larrys-mod-debug-apk` artifact.
-5. Extract it; install `app-debug.apk` on your Android device. You may need to allow installation from your browser/file manager.
+> **Development build:** Features and controls may change. The repository source has not yet been independently runtime-tested as a Windows release.
 
-## OpenRouter AI preset
+## Project
 
-Setup defaults to OpenRouter's OpenAI-compatible endpoint and `nvidia/nemotron-3-ultra-550b-a55b:free`. Enter a newly generated OpenRouter API key in Setup. Keys are deliberately not embedded in this repository or APK and are not written to localStorage; they remain in memory for the current page session. Re-enter the key after restarting the app.
+- **Game source:** `app/src/main/assets/index.html`
+- **Android wrapper:** Android WebView project
+- **Windows wrapper:** Electron desktop app
+- **3D engine:** Three.js r128
+- **Physics:** Cannon.js 0.6.2
 
-**Security:** the API key previously pasted into chat should be revoked and replaced. Never commit API keys or add them as plaintext to HTML. For a public release, use a private HTTPS proxy that stores the key server-side. Direct provider requests from WebView may still be subject to provider CORS policy; if blocked, the proxy is the reliable fix.
+## Current features in the source
 
-## Notes
+- 3D physics sandbox environment
+- Spawnable and manipulable props
+- Free camera and player mode
+- Tool and weapon systems
+- AI characters with configurable provider/persona settings
+- In-game menus and settings
+- Touch-oriented controls (Android)
 
-- The prop-count deletion cap has been removed. Hardware memory and physics performance are still finite; excessive objects can slow or crash a device.
-- The game uses Three.js r128 and Cannon.js 0.6.2. GitHub Actions downloads these libraries and packages them into the APK.
-- This workflow builds a **debug APK**, not a Play Store-signed release.
-- The project has not been built on a real Android device in this environment.
+Workshop/community sharing and multiplayer are **not confirmed as implemented** in the current source. Please do not assume they are available.
+
+## Windows build (GitHub Actions)
+
+1. Open the repository's **Actions** tab.
+2. Select **Build Sandbox Protocol for Windows**.
+3. Choose **Run workflow**.
+4. When the workflow completes, download the `sandbox-protocol-windows` artifact.
+5. Extract the ZIP. It contains a Windows installer and a portable build.
+
+You can also build locally with Node.js LTS:
+
+```powershell
+npm install
+npm run dist:win
+```
+
+The outputs are placed in `dist/`.
+
+## Android build
+
+1. Open **Actions**.
+2. Select **Build Sandbox Protocol Android APK** and run the workflow.
+3. Download the `sandbox-protocol-debug-apk` artifact from the completed run.
+4. Extract and install the debug APK on your Android device.
+
+This is a debug APK, not a Play Store-signed release.
+
+## AI provider configuration & security
+
+AI provider settings are configured inside the game. Never commit API keys to this repository, embed a private key into a distributable, or post keys in issues/chats. Direct provider requests from a browser/WebView may be affected by CORS or provider policies; a private HTTPS proxy is the more reliable production architecture.
+
+## Capturing gameplay
+
+For footage, run the Windows build, enter the game, and capture the actual screen using your preferred recorder. README screenshots and preview artwork should be genuine captures from the running game—not generated mock gameplay.
+
+## Contributing
+
+Bug reports and improvements are welcome. Please describe reproduction steps and include genuine screenshots or logs when relevant. Avoid sharing API keys or other secrets.
+
+## License
+
+See the repository's `LICENSE` file (if present) for the project's license terms.
