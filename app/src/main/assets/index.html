@@ -51,7 +51,7 @@ button:active,button.on{background:var(--or);color:#111;border-color:var(--or)}
 .modal input[type=text],.modal input[type=password],.modal select,.modal textarea{background:#0f1116;border:1px solid var(--line);padding:8px;border-radius:3px}
 .modal small{opacity:.65;line-height:1.4}.ar{display:flex;justify-content:space-between;align-items:center;gap:8px}.pr{display:flex;flex-wrap:wrap;gap:6px}
 
-#mobileTop{display:none;position:fixed;top:env(safe-area-inset-top,8px);left:10px;z-index:30;display:flex;gap:8px}
+#mobileTop{display:none;position:fixed;top:env(safe-area-inset-top,8px);left:10px;z-index:30;gap:8px}
 #mobileTop button{background:#252a33eF;border:1px solid #8994a3;color:#fff;border-radius:8px;padding:10px 14px;font-weight:800}
 .gmenu{position:fixed;z-index:80;left:4vw;right:4vw;top:7vh;bottom:7vh;max-width:760px;margin:auto;background:rgba(19,22,29,.97);border:1px solid #697585;border-radius:12px;box-shadow:0 12px 50px #000b;color:#f4f5f7;padding:12px;overflow:auto;touch-action:pan-y}
 .gmenu header{display:flex;align-items:center;justify-content:space-between;background:#343b47;padding:10px;border-radius:7px;margin-bottom:10px}
@@ -63,6 +63,8 @@ button:active,button.on{background:var(--or);color:#111;border-color:var(--or)}
 #pauseMenu[hidden],#spawnMenu[hidden]{display:none}
 #hud{z-index:25}
 @media(max-width:700px){#hud{left:8px;right:8px;bottom:calc(env(safe-area-inset-bottom,0px) + 8px);display:flex;flex-wrap:wrap;gap:7px;justify-content:flex-end}#tools{width:100%;display:flex;overflow-x:auto;gap:5px}#tools button{min-width:74px;min-height:44px;font-size:11px}#bFire{right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 82px);width:76px;height:76px}#bJump{right:96px;bottom:calc(env(safe-area-inset-bottom,0px) + 48px)}#bAlt{right:96px;bottom:calc(env(safe-area-inset-bottom,0px) + 112px)}#bRotate{right:180px;bottom:calc(env(safe-area-inset-bottom,0px) + 112px)}#bSprint{left:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 24px)}#bView{right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 170px)}#bar{bottom:calc(env(safe-area-inset-bottom,0px) + 6px)}}
+
+@media (pointer:fine){#mobileTop{display:none!important}#bFire,#bJump,#bAlt,#bRotate,#bSprint,#bView{display:none!important}#hint{display:block!important;position:fixed;bottom:10px;left:50%;transform:translateX(-50%);max-width:80vw;text-align:center;pointer-events:none}}
 
 /* Mobile-first GMod HUD refinements */
 @media(max-width:700px){
@@ -94,10 +96,10 @@ button:active,button.on{background:var(--or);color:#111;border-color:var(--or)}
 </style></head>
 <body>
 <canvas id="c"></canvas>
-<div id="top"><b>SANDBOX PROTOCOL</b><span id="stat"></span><button id="bMode">Play</button><button id="bSpawnMenu">Spawn</button><button id="bMenu">Menu</button><button id="bAI">AIs</button><button id="gear">Setup</button></div>
+<div id="top"><b>SANDBOX PROTOCOL</b><span id="stat"></span><button id="bMode">Play</button><button id="bSpawnMenu">Spawn</button><button id="bChatLog">Chat log</button><button id="bMenu">Menu</button><button id="bAI">AIs</button><button id="gear">Setup</button></div>
 <div id="hp" hidden><i></i></div><div id="log"></div><div id="cross" hidden></div><div id="toast"></div><div id="js" hidden><div id="jk"></div></div>
 <div id="hud" hidden><div id="tools"></div><button id="bFire">Fire</button><button id="bJump">Jump</button><button id="bAlt">Freeze</button><button id="bRotate">Rotate</button><button id="bSprint">Sprint</button><button id="bView">View</button></div>
-<div id="dead" hidden></div><div id="mobileTop"><button id="spawnOpen">☰ Spawn</button><button id="pauseOpen">Ⅱ</button></div><div id="spawnMenu" class="gmenu" hidden><header><b>SPAWN MENU</b><button id="spawnClose">✕</button></header><nav><button class="tab active" data-tab="propsTab">Props</button><button class="tab" data-tab="toolsTab">Tools</button><button class="tab" data-tab="weaponsTab">Weapons</button><button class="tab" data-tab="npcsTab">NPCs</button></nav><section id="propsTab"><div id="spawnGrid"></div></section><section id="toolsTab" hidden><p>Toolgun modes</p><div id="toolModes"></div></section><section id="weaponsTab" hidden><p>Weapon selection</p><div id="weaponGrid"></div></section><section id="npcsTab" hidden><p>AI characters</p><button id="openAI">Manage AI players</button></section></div><div id="pauseMenu" class="gmenu" hidden><header><b>PAUSED</b><button id="pauseClose">✕</button></header><button id="resumeGame">Resume</button><button id="pauseSpawn">Spawn menu</button><button id="pauseAI">AI players</button><button id="pauseSettings">Settings</button><button id="quitGame">Return to menu</button></div><div id="weapon" hidden></div><div id="hint" hidden></div>
+<div id="chatLogModal" class="modal" hidden><div style="max-width:760px"><b style="color:var(--or)">CHAT LOG</b><div id="chatLogEntries" style="max-height:55vh;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;background:#0f1116;border:1px solid var(--line);padding:10px;margin:10px 0"></div><button id="chatLogClose" class="on">Close</button></div></div><div id="dead" hidden></div><div id="mobileTop"><button id="spawnOpen">☰ Spawn</button><button id="pauseOpen">Ⅱ</button></div><div id="spawnMenu" class="gmenu" hidden><header><b>SPAWN MENU</b><button id="spawnClose">✕</button></header><nav><button class="tab active" data-tab="propsTab">Props</button><button class="tab" data-tab="toolsTab">Tools</button><button class="tab" data-tab="weaponsTab">Weapons</button><button class="tab" data-tab="npcsTab">NPCs</button></nav><section id="propsTab"><div id="spawnGrid"></div></section><section id="toolsTab" hidden><p>Toolgun modes</p><div id="toolModes"></div></section><section id="weaponsTab" hidden><p>Weapon selection</p><div id="weaponGrid"></div></section><section id="npcsTab" hidden><p>AI characters</p><button id="openAI">Manage AI players</button></section></div><div id="pauseMenu" class="gmenu" hidden><header><b>PAUSED</b><button id="pauseClose">✕</button></header><button id="resumeGame">Resume</button><button id="pauseSpawn">Spawn menu</button><button id="pauseAI">AI players</button><button id="pauseSettings">Settings</button><button id="quitGame">Return to menu</button></div><div id="weapon" hidden></div><div id="hint" hidden></div>
 <div id="bar"><div id="props"></div><div id="row"><input id="inp" placeholder="Build a prop, say something, or @Name to whisper" enterkeyhint="send" autocomplete="off"><button id="bSpawn" class="on">Build</button><button id="bChat">Say</button></div></div>
 <div id="set" class="modal" hidden><div>
   <b style="color:var(--or)">Default AI provider</b>
@@ -279,6 +281,9 @@ PROPS.forEach(p=>{const b=document.createElement('button');b.textContent=p.name;
 
 /* ---------- actors (player + AIs) ---------- */
 const actors=[],kingdoms=[],chat=[],dmgQ=[];let me=null,mode='cam',focus=null,inFlight=0,kid=1;
+try{const savedChat=JSON.parse(localStorage.getItem('sp_chat_log')||'[]');if(Array.isArray(savedChat))chat.push(...savedChat.filter(x=>typeof x==='string'))}catch(e){}
+function recordChat(line){chat.push(String(line));try{localStorage.setItem('sp_chat_log',JSON.stringify(chat))}catch(e){} }
+function renderChatLog(){const box=$('chatLogEntries');box.textContent=chat.join('\n\n');box.scrollTop=box.scrollHeight;}
 const tgt=new THREE.Vector3(0,1,0);
 const gM=(c,e)=>new THREE.MeshLambertMaterial({color:c,emissive:e||0x000000});
 function model(c){
@@ -336,13 +341,14 @@ function removeActor(a){
 }
 function feed(t,c){const d=document.createElement('div');d.textContent=t;d.style.color=c||'#fff';$('log').append(d);while($('log').children.length>7)$('log').firstChild.remove();setTimeout(()=>d.remove(),14000)}
 function say(a,t){
-  t=String(t||'').slice(0,90);if(!t)return;a.bubUntil=Date.now()+5000;
+  t=String(t||'');if(!t.trim())return;a.bubUntil=Date.now()+5000;
   if(!a.bub){a.bub=document.createElement('div');a.bub.className='bub';document.body.append(a.bub)}
-  a.bub.textContent=t;a.bub.hidden=false;chat.push(a.name+': '+t);if(chat.length>30)chat.shift();feed(a.name+': '+t,'#fff');
+  a.bub.textContent=t;a.bub.hidden=false;recordChat(a.name+': '+t);feed(a.name+': '+t,'#fff');
 }
 
 function whisper(a,to,text){
-  const o=actors.find(x=>x.id===to);text=String(text||'').slice(0,160);if(!o||o===a||!text)return;
+  const o=actors.find(x=>x.id===to);text=String(text||'');if(!o||o===a||!text.trim())return;
+  recordChat('[whisper] '+a.name+' → '+o.name+': '+text);
   if(o.isAI){o.inbox.push(a.name+' (id '+a.id+'): '+text);if(o.inbox.length>6)o.inbox.shift();o.next=Math.min(o.next,Date.now()+900)}
   if(o===me)feed('[whisper] '+a.name+': '+text,'#d9a0ff');else if(S.spy)feed('[spy] '+a.name+' > '+o.name+': '+text,'#b58cff');
 }
@@ -668,11 +674,12 @@ async function run(kind){
     else{
       const n=me?me.name:'You',m=v.match(/^@(\S+)\s+([\s\S]+)/),t=m&&actors.find(a=>a.isAI&&a.name.toLowerCase()===m[1].toLowerCase());
       if(t){whisper({name:n,id:me?me.id:0},t.id,m[2]);feed('[you > '+t.name+'] '+m[2],'#9fd0ff')}
-      else{if(me)say(me,v);else{chat.push(n+': '+v);feed(n+': '+v,'#9fd0ff')}wake()}
+      else{if(me)say(me,v);else{recordChat(n+': '+v);feed(n+': '+v,'#9fd0ff')}wake()}
     }
   }catch(e){toast(e.message)}
 }
-$('bSpawn').onclick=()=>run('spawn');$('bChat').onclick=()=>run('chat');$('inp').onkeydown=e=>{if(e.key==='Enter')run('spawn')};
+$('bSpawn').onclick=()=>run('spawn');$('bChat').onclick=()=>run('chat');$('inp').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();run('spawn')}};
+$('bChatLog').onclick=()=>{renderChatLog();$('chatLogModal').hidden=false};$('chatLogClose').onclick=()=>{$('chatLogModal').hidden=true};
 $('kPre').onchange=()=>{const p=PRE[$('kPre').value];$('kUrl').value=p[0];$('kModel').value=p[1]};
 $('gear').onclick=()=>{$('kPre').value=S.preset;$('kUrl').value=S.url;$('kKey').value=S.key;$('kModel').value=S.model;$('kAuto').checked=S.auto;$('kQ').value=S.q;$('kPace').value=S.pace;$('kSpy').checked=S.spy;$('set').hidden=false};
 $('kClose').onclick=()=>{S.preset=$('kPre').value;S.url=$('kUrl').value.trim();S.key=$('kKey').value.trim();S.model=$('kModel').value.trim();S.auto=$('kAuto').checked;S.q=$('kQ').value;S.pace=$('kPace').value;S.spy=$('kSpy').checked;save();applyQ();$('set').hidden=true;if(paused)$('pauseMenu').hidden=false};
