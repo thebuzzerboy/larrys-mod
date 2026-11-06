@@ -23,8 +23,6 @@ jobs:
           node-version: '20'
       - name: Test AI and mod studio foundations
         run: npm test
-      - name: Build searchable game knowledge index
-        run: node scripts/build-knowledge.js
       - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
