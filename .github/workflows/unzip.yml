@@ -1,4 +1,4 @@
-name: Extract ZIP into Main
+name: Install Larry's Mod
 
 on:
   workflow_dispatch:
@@ -7,27 +7,36 @@ permissions:
   contents: write
 
 jobs:
-  unzip:
+  install:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Extract ZIP
         run: |
-          mkdir -p extracted
-          unzip -o larrys-mod-android-github-actions.zip -d extracted
+          mkdir -p temp_extract
+          unzip -o larrys-mod-android-github-actions.zip -d temp_extract
 
-      - name: Copy files into main folder
+      - name: Find and move project files
         run: |
-          cp -a extracted/. .
-          rm -rf extracted
-          rm -f larrys-mod-android-github-actions.zip
+          if [ -d "temp_extract/LarrysMod" ]; then
+            cp -a temp_extract/LarrysMod/. .
+          else
+            cp -a temp_extract/. .
+          fi
 
-      - name: Commit changes
+      - name: Clean up
+        run: |
+          rm -rf temp_extract
+          rm -f larrys-mod-android-github-actions.zip
+          rm -rf LarrysMod
+
+      - name: Commit and push
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
-          git commit -m "Install Larry's Mod project files" || echo "Nothing to commit"
+          git commit -m "Install Larry's Mod files" || echo "No changes to commit"
           git push
