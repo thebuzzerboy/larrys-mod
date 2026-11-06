@@ -96,10 +96,10 @@ button:active,button.on{background:var(--or);color:#111;border-color:var(--or)}
 </style></head>
 <body>
 <canvas id="c"></canvas>
-<div id="top"><b>SANDBOX PROTOCOL</b><span id="stat"></span><button id="bMode">Play</button><button id="bSpawnMenu">Spawn</button><button id="bChatLog">Chat log</button><button id="bMenu">Menu</button><button id="bAI">AIs</button><button id="gear">Setup</button></div>
+<div id="top"><b>SANDBOX PROTOCOL</b><span id="stat"></span><button id="bMode">Play</button><button id="bSpawnMenu">Spawn</button><button id="bMods">Mods</button><button id="bChatLog">Chat log</button><button id="bMenu">Menu</button><button id="bAI">AIs</button><button id="gear">Setup</button></div>
 <div id="hp" hidden><i></i></div><div id="log"></div><div id="cross" hidden></div><div id="toast"></div><div id="js" hidden><div id="jk"></div></div>
 <div id="hud" hidden><div id="tools"></div><button id="bFire">Fire</button><button id="bJump">Jump</button><button id="bAlt">Freeze</button><button id="bRotate">Rotate</button><button id="bSprint">Sprint</button><button id="bView">View</button></div>
-<div id="chatLogModal" class="modal" hidden><div style="max-width:760px"><b style="color:var(--or)">CHAT LOG</b><div id="chatLogEntries" style="max-height:55vh;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;background:#0f1116;border:1px solid var(--line);padding:10px;margin:10px 0"></div><button id="chatLogClose" class="on">Close</button></div></div><div id="dead" hidden></div><div id="mobileTop"><button id="spawnOpen">☰ Spawn</button><button id="pauseOpen">Ⅱ</button></div><div id="spawnMenu" class="gmenu" hidden><header><b>SPAWN MENU</b><button id="spawnClose">✕</button></header><nav><button class="tab active" data-tab="propsTab">Props</button><button class="tab" data-tab="toolsTab">Tools</button><button class="tab" data-tab="weaponsTab">Weapons</button><button class="tab" data-tab="npcsTab">NPCs</button></nav><section id="propsTab"><div id="spawnGrid"></div></section><section id="toolsTab" hidden><p>Toolgun modes</p><div id="toolModes"></div></section><section id="weaponsTab" hidden><p>Weapon selection</p><div id="weaponGrid"></div></section><section id="npcsTab" hidden><p>AI characters</p><button id="openAI">Manage AI players</button></section></div><div id="pauseMenu" class="gmenu" hidden><header><b>PAUSED</b><button id="pauseClose">✕</button></header><button id="resumeGame">Resume</button><button id="pauseSpawn">Spawn menu</button><button id="pauseAI">AI players</button><button id="pauseSettings">Settings</button><button id="quitGame">Return to menu</button></div><div id="weapon" hidden></div><div id="hint" hidden></div>
+<div id="modsModal" class="modal" hidden><div style="max-width:760px"><b style="color:var(--or)">LOCAL MODS</b><small>Mods are imported from files on this device and saved in this browser profile. This experimental loader accepts data-only JSON; it never executes mod JavaScript.</small><div id="modsList" style="display:flex;flex-direction:column;gap:8px;max-height:48vh;overflow:auto"></div><input id="modsFile" type="file" accept=".json,application/json" hidden><div class="pr"><button id="modsImport" class="on">Import mod JSON</button><button id="modsTemplate">Export example mod</button><button id="modsClose">Close</button></div><small>First version: procedural physics props, colors, and built-in behavior presets. Custom model/texture files and scripted behaviors are not supported yet.</small></div></div><div id="chatLogModal" class="modal" hidden><div style="max-width:760px"><b style="color:var(--or)">CHAT LOG</b><div id="chatLogEntries" style="max-height:55vh;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;background:#0f1116;border:1px solid var(--line);padding:10px;margin:10px 0"></div><button id="chatLogClose" class="on">Close</button></div></div><div id="dead" hidden></div><div id="mobileTop"><button id="spawnOpen">☰ Spawn</button><button id="pauseOpen">Ⅱ</button></div><div id="spawnMenu" class="gmenu" hidden><header><b>SPAWN MENU</b><button id="spawnClose">✕</button></header><nav><button class="tab active" data-tab="propsTab">Props</button><button class="tab" data-tab="toolsTab">Tools</button><button class="tab" data-tab="weaponsTab">Weapons</button><button class="tab" data-tab="npcsTab">NPCs</button></nav><section id="propsTab"><div id="spawnGrid"></div></section><section id="toolsTab" hidden><p>Toolgun modes</p><div id="toolModes"></div></section><section id="weaponsTab" hidden><p>Weapon selection</p><div id="weaponGrid"></div></section><section id="npcsTab" hidden><p>AI characters</p><button id="openAI">Manage AI players</button></section></div><div id="pauseMenu" class="gmenu" hidden><header><b>PAUSED</b><button id="pauseClose">✕</button></header><button id="resumeGame">Resume</button><button id="pauseSpawn">Spawn menu</button><button id="pauseAI">AI players</button><button id="pauseSettings">Settings</button><button id="quitGame">Return to menu</button></div><div id="weapon" hidden></div><div id="hint" hidden></div>
 <div id="bar"><div id="props"></div><div id="row"><input id="inp" placeholder="Build a prop, say something, or @Name to whisper" enterkeyhint="send" autocomplete="off"><button id="bSpawn" class="on">Build</button><button id="bChat">Say</button></div></div>
 <div id="set" class="modal" hidden><div>
   <b style="color:var(--or)">Default AI provider</b>
@@ -278,6 +278,97 @@ function spawnPos(){
   return[tgt.x+rnd(-2,2),3.5,tgt.z+rnd(-2,2)];
 }
 PROPS.forEach(p=>{const b=document.createElement('button');b.textContent=p.name;b.onclick=()=>mkProp(p,...spawnPos(),me?me.id:undefined);pr.append(b)});
+
+/* ---------- local, data-only mod loader ---------- */
+const LOCAL_MODS_KEY='sp_local_mods_v1';
+let localMods=[];
+const MOD_SHAPES=['box','sphere','cylinder','cone','torus'];
+function cleanMod(raw){
+  if(!raw||typeof raw!=='object'||Array.isArray(raw))throw new Error('Mod file must contain a JSON object.');
+  const id=String(raw.id||'').toLowerCase();
+  if(!/^[a-z0-9][a-z0-9_-]{1,39}$/.test(id))throw new Error('Mod id must be 2–40 lowercase letters, numbers, _ or -.');
+  const name=String(raw.name||'').trim().slice(0,40);
+  if(!name)throw new Error('Mod needs a name.');
+  if(!Array.isArray(raw.items)||!raw.items.length||raw.items.length>30)throw new Error('A mod must contain 1–30 items.');
+  const items=raw.items.map((it,i)=>{
+    if(!it||typeof it!=='object')throw new Error('Invalid item '+(i+1)+'.');
+    const parts=Array.isArray(it.parts)?it.parts.slice(0,12):[{shape:'box'}];
+    const safeParts=parts.map(part=>{
+      part=part&&typeof part==='object'?part:{};
+      const vec=(v,n,lim)=>Array.from({length:n},(_,k)=>clamp(Array.isArray(v)?Number(v[k]):(k===0?Number(v)||0:0),-lim,lim));
+      const size=Array.isArray(part.size)?part.size.slice(0,3).map(v=>clamp(v,.05,8)):[1];
+      return {shape:MOD_SHAPES.includes(part.shape)?part.shape:'box',size,
+        pos:vec(part.pos,3,8),rot:vec(part.rot,3,360),
+        color:HEX.test(part.color||'')?part.color:'#888888',
+        glow:HEX.test(part.glow||'')?part.glow:'#000000'};
+    });
+    return {name:String(it.name||('Item '+(i+1))).trim().slice(0,24)||('Item '+(i+1)),
+      mass:clamp(it.mass||1,.1,200),bounce:clamp(it.bounce,0,1),
+      behavior:BEHS.includes(it.behavior)?it.behavior:'none',
+      power:clamp(it.power||1,.3,3),static:it.static===true,parts:safeParts.length?safeParts:[{shape:'box'}]};
+  });
+  return {id,name,version:String(raw.version||'1.0.0').slice(0,20),
+    author:String(raw.author||'Unknown').slice(0,40),
+    description:String(raw.description||'').slice(0,240),items};
+}
+function saveLocalMods(){
+  try{localStorage.setItem(LOCAL_MODS_KEY,JSON.stringify(localMods))}catch(e){toast('Could not save mods: device storage is full or unavailable')}
+}
+try{
+  const saved=JSON.parse(localStorage.getItem(LOCAL_MODS_KEY)||'[]');
+  if(Array.isArray(saved))localMods=saved.map(x=>({mod:cleanMod(x.mod),enabled:x.enabled!==false}));
+}catch(e){localMods=[]}
+function spawnLocalModItem(mod,item){
+  const pos=spawnPos();mkProp(item,pos[0],pos[1],pos[2],me?me.id:undefined);
+  toast('Spawned '+item.name+' · '+mod.name);
+}
+function renderLocalModSpawns(){
+  document.querySelectorAll('[data-local-mod-item]').forEach(b=>b.remove());
+  localMods.filter(x=>x.enabled).forEach(entry=>entry.mod.items.forEach((item,index)=>{
+    const b=document.createElement('button');b.textContent='＋ '+item.name+' · '+entry.mod.name;
+    b.dataset.localModItem='1';b.title='Local mod: '+entry.mod.name;
+    b.onclick=()=>spawnLocalModItem(entry.mod,item);$('spawnGrid').append(b);
+  }));
+}
+function renderLocalMods(){
+  const list=$('modsList');if(!list)return;list.textContent='';
+  if(!localMods.length){const empty=document.createElement('small');empty.textContent='No local mods installed yet. Export the example, edit its JSON, then import it.';list.append(empty)}
+  localMods.forEach((entry,index)=>{
+    const card=document.createElement('div');card.style.cssText='border:1px solid var(--line);background:#151922;padding:10px;border-radius:6px;display:flex;flex-direction:column;gap:6px';
+    const title=document.createElement('b');title.textContent=entry.mod.name+'  v'+entry.mod.version;
+    const meta=document.createElement('small');meta.textContent='by '+entry.mod.author+' · '+entry.mod.items.length+' item(s) · '+entry.mod.id;
+    const desc=document.createElement('small');desc.textContent=entry.mod.description||'No description';
+    const actions=document.createElement('div');actions.className='pr';
+    const toggle=document.createElement('button');toggle.textContent=entry.enabled?'Disable':'Enable';toggle.onclick=()=>{entry.enabled=!entry.enabled;saveLocalMods();renderLocalMods();renderLocalModSpawns()};
+    const remove=document.createElement('button');remove.textContent='Remove';remove.onclick=()=>{localMods.splice(index,1);saveLocalMods();renderLocalMods();renderLocalModSpawns()};
+    actions.append(toggle,remove);card.append(title,meta,desc,actions);list.append(card);
+  });
+  renderLocalModSpawns();
+}
+function openMods(){renderLocalMods();$('modsModal').hidden=false}
+$('bMods').onclick=openMods;$('modsClose').onclick=()=>$('modsModal').hidden=true;
+$('modsImport').onclick=()=>$('modsFile').click();
+$('modsFile').onchange=async e=>{
+  const file=e.target.files&&e.target.files[0];if(!file)return;
+  try{
+    if(file.size>256*1024)throw new Error('Mod JSON exceeds the 256 KiB limit.');
+    const raw=JSON.parse(await file.text()),mod=cleanMod(raw);
+    if(localMods.some(x=>x.mod.id===mod.id))throw new Error('A mod with this id is already installed. Remove it before importing an update.');
+    localMods.push({mod,enabled:true});saveLocalMods();renderLocalMods();toast('Installed local mod: '+mod.name);
+  }catch(err){toast('Mod import failed: '+(err&&err.message?err.message:'invalid file'))}
+  e.target.value='';
+};
+$('modsTemplate').onclick=()=>{
+  const sample={id:'my-first-mod',name:'My First Mod',version:'1.0.0',author:'Your name',
+    description:'A locally made example physics prop.',
+    items:[{name:'Neon Crate',mass:2,bounce:.35,behavior:'spin',power:1,
+      parts:[{shape:'box',size:[1.2,1.2,1.2],color:'#246bce',glow:'#143b88'},
+             {shape:'box',size:[1.3,.12,1.3],pos:[0,.5,0],color:'#63d8ff',glow:'#246bce'}]}]};
+  const blob=new Blob([JSON.stringify(sample,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='sandbox-protocol-example-mod.json';a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+};
+renderLocalModSpawns();
 
 /* ---------- actors (player + AIs) ---------- */
 const actors=[],kingdoms=[],chat=[],dmgQ=[];let me=null,mode='cam',focus=null,inFlight=0,kid=1;
