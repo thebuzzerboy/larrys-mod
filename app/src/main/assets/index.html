@@ -94,7 +94,13 @@ button:active,button.on{background:var(--or);color:#111;border-color:var(--or)}
 </style></head>
 <body>
 <canvas id="c"></canvas>
-<div id="top"><b>SANDBOX PROTOCOL</b><span id="stat"></span><button id="bMode">Play</button><button id="bMenu">Menu</button><button id="bAI">AIs</button><button id="gear">Setup</button><span class="devbadge">DEV BUILD AUTHORISED</span></div>
+<div id="top"><b>SANDBOX PROTOCOL</b><span id="stat"></span><button id="bMode">Play</button><button id="bMenu">Menu</button><button id="bAI">AIs</button><button id="gear">Setup</button><button id="bActivation">Activation</button><span class="devbadge" id="devBadge">DEV BUILD AUTHORISED</span>
+<div id="activationModal" class="modal" hidden><div><b style="color:var(--or)">Developer activation · device pairing</b>
+<p>Create a device-bound pairing request for the Owner Client. After the owner approves it, import the signed activation JSON. This flow is manual file exchange.</p>
+<button id="makePair" class="on">Export pairing request</button>
+<label>Owner public verification key (PEM)<textarea id="ownerTrust" rows="4" placeholder="Paste the Owner Client public key here"></textarea></label>
+<label>Signed activation JSON<input id="activationFile" type="file" accept=".json,application/json"></label>
+<small id="activationStatus">Activation has not been verified.</small><button id="activationClose" class="on">Close</button></div></div></div>
 <div id="hp" hidden><i></i></div><div id="log"></div><div id="cross" hidden></div><div id="toast"></div><div id="js" hidden><div id="jk"></div></div>
 <div id="hud" hidden><div id="tools"></div><button id="bFire">Fire</button><button id="bJump">Jump</button><button id="bAlt">Freeze</button><button id="bRotate">Rotate</button><button id="bSprint">Sprint</button><button id="bView">View</button></div>
 <div id="dead" hidden></div><div id="mobileTop"><button id="spawnOpen">☰ Spawn</button><button id="pauseOpen">Ⅱ</button></div><div id="spawnMenu" class="gmenu" hidden><header><b>SPAWN MENU</b><button id="spawnClose">✕</button></header><nav><button class="tab active" data-tab="propsTab">Props</button><button class="tab" data-tab="toolsTab">Tools</button><button class="tab" data-tab="weaponsTab">Weapons</button><button class="tab" data-tab="npcsTab">NPCs</button></nav><section id="propsTab"><div id="spawnGrid"></div></section><section id="toolsTab" hidden><p>Toolgun modes</p><div id="toolModes"></div></section><section id="weaponsTab" hidden><p>Weapon selection</p><div id="weaponGrid"></div></section><section id="npcsTab" hidden><p>AI characters</p><button id="openAI">Manage AI players</button></section></div><div id="pauseMenu" class="gmenu" hidden><header><b>PAUSED</b><button id="pauseClose">✕</button></header><button id="resumeGame">Resume</button><button id="pauseSpawn">Spawn menu</button><button id="pauseAI">AI players</button><button id="pauseSettings">Settings</button><button id="quitGame">Return to menu</button></div><div id="weapon" hidden></div><div id="hint" hidden></div>
@@ -691,7 +697,53 @@ Object.keys(PERS).forEach(n=>{const b=document.createElement('button');b.textCon
 $('aAdd').onclick=()=>{if(!$('aN').value.trim()){toast('Give the AI a name');return}addAgent({name:$('aN').value.trim(),persona:$('aP').value.trim(),model:$('aM').value.trim(),url:$('aU').value.trim(),key:$('aK').value.trim()});['aN','aP','aM','aU','aK'].forEach(i=>$(i).value='')};
 $('bAI').onclick=()=>{renderAI();$('ai').hidden=false};$('aClose').onclick=()=>{$('ai').hidden=true;if(paused)$('pauseMenu').hidden=false};
 
-/* ---------- loop ---------- */
+
+/* ---------- local developer activation file workflow ---------- */
+(()=>{
+ const $a=id=>document.getElementById(id), PRODUCT='sandbox-protocol-dev-unlock';
+ const b64=b=>btoa(String.fromCharCode(...new Uint8Array(b)));
+ const unb64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+ const pemBytes=p=>unb64(p.replace(/-----BEGIN [^-]+-----|-----END [^-]+-----|\\s/g,''));
+ const canonical=v=>Array.isArray(v)?'['+v.map(canonical).join(',')+']':v&&typeof v==='object'?'{'+Object.keys(v).sort().map(k=>JSON.stringify(k)+':'+canonical(v[k])).join(',')+'}':JSON.stringify(v);
+ const hash=async b=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',b))).map(x=>x.toString(16).padStart(2,'0')).join('');
+ const status=m=>$a('activationStatus').textContent=m;
+ $a('bActivation').onclick=()=>{$a('activationModal').hidden=false;try{$a('ownerTrust').value=localStorage.getItem('sp_owner_trust')||''}catch{}};
+ $a('activationClose').onclick=()=>{$a('activationModal').hidden=true};
+ $a('makePair').onclick=async()=>{
+  try{
+   let kp,priv;
+   const saved=localStorage.getItem('sp_device_keypair');
+   if(saved){const d=JSON.parse(saved);priv=await crypto.subtle.importKey('pkcs8',unb64(d.privateKey),{name:'Ed25519'},true,['sign']);kp={privateKey:priv,publicKey:await crypto.subtle.importKey('spki',unb64(d.publicKey),{name:'Ed25519'},true,['verify'])};}
+   else{kp=await crypto.subtle.generateKey({name:'Ed25519'},true,['sign','verify']);const sk=b64(await crypto.subtle.exportKey('pkcs8',kp.privateKey)),pk=b64(await crypto.subtle.exportKey('spki',kp.publicKey));localStorage.setItem('sp_device_keypair',JSON.stringify({privateKey:sk,publicKey:pk}));}
+   const pub=await crypto.subtle.exportKey('spki',kp.publicKey);
+   const pubPem='-----BEGIN PUBLIC KEY-----\\n'+b64(pub).match(/.{1,64}/g).join('\\n')+'\\n-----END PUBLIC KEY-----';
+   const req={protocol:'sandbox-protocol-pairing-v1',requestId:crypto.randomUUID(),deviceName:navigator.userAgent.slice(0,80),appVersion:'dev',devicePublicKey:pubPem};
+   const blob=new Blob([JSON.stringify(req,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='sandbox-protocol-pairing-request.json';a.click();URL.revokeObjectURL(url);status('Pairing request exported. Send the JSON to the Owner Client operator.');
+  }catch(e){status('Pair request failed: '+e.message)}
+ };
+ $a('ownerTrust').onchange=()=>{try{localStorage.setItem('sp_owner_trust',$a('ownerTrust').value.trim())}catch{}};
+ $a('activationFile').onchange=async e=>{
+  const file=e.target.files&&e.target.files[0];if(!file)return;
+  try{
+   const env=JSON.parse(await file.text()),sig=env.signature;
+   if(env.schema!==1||env.product!==PRODUCT||!Array.isArray(env.features)||!env.features.includes('developer-mode')||env.signatureAlgorithm!=='Ed25519'||typeof sig!=='string')throw Error('Activation schema/product/features do not match.');
+   const trust=$a('ownerTrust').value.trim();if(!trust)throw Error('Paste the owner public verification key first.');
+   if(env.ownerPublicKey!==trust)throw Error('Activation owner key does not match the trusted key.');
+   const ownerKey=await crypto.subtle.importKey('spki',pemBytes(trust),{name:'Ed25519'},false,['verify']);
+   const payload={schema:env.schema,activationId:env.activationId,product:env.product,deviceKeyHash:env.deviceKeyHash,issuedAt:env.issuedAt,expiresAt:env.expiresAt,features:env.features};
+   const valid=await crypto.subtle.verify({name:'Ed25519'},ownerKey,unb64(sig),new TextEncoder().encode(canonical(payload)));
+   if(!valid)throw Error('Signature verification failed.');
+   if(env.expiresAt&&Date.parse(env.expiresAt)<=Date.now())throw Error('Activation has expired.');
+   const saved=localStorage.getItem('sp_device_keypair');if(!saved)throw Error('Generate a pairing request on this device first.');
+   const device=JSON.parse(saved),der=unb64(device.publicKey),keyHash=await hash(der);
+   if(keyHash!==env.deviceKeyHash)throw Error('Activation is for a different device key.');
+   localStorage.setItem('sp_verified_activation',JSON.stringify({activationId:env.activationId,features:env.features,verifiedAt:new Date().toISOString()}));
+   status('Activation signature and device binding verified. ID: '+env.activationId);
+  }catch(err){status('Activation rejected: '+err.message)}
+  e.target.value='';
+ };
+})();
+\n/* ---------- loop ---------- */
 let last=performance.now(),nf=0,fAcc=0,fps=0;
 function frame(t){
   const dt=Math.min((t-last)/1000,.05);last=t;nf++;fAcc+=dt;const now=Date.now();
