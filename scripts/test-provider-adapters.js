@@ -37,10 +37,10 @@ test("Gemini generateContent format maps system and candidate text",async()=>{
 });
 test("custom proxy supports arbitrary JSON body and response path",async()=>{
  let seen;global.fetch=async(url,options)=>{seen={url,options};return{ok:true,status:200,json:async()=>({result:{reply:"custom reply"}})}};
- const r=await api.request({protocol:"custom",url:"https://proxy.example/api",path:"/generate",model:"m-1",key:"secret",bodyTemplate:'{"engine":"{{model}}","prompt":"{{system}}\\n{{user}}","history":{{messages}}}',responsePath:"result.reply"},"system text","user text");
+ const r=await api.request({protocol:"custom",url:"https://proxy.example/api",path:"/generate",model:"m-1",key:"secret",bodyTemplate:'{"engine":{{model}},"system":{{system}},"prompt":{{user}},"history":{{messages}}}',responsePath:"result.reply"},"system text","user text");
  assert.equal(seen.url,"https://proxy.example/api/generate");
  assert.equal(seen.options.headers.Authorization,"Bearer secret");
- const body=JSON.parse(seen.options.body);assert.equal(body.engine,"m-1");assert.match(body.prompt,/system text/);assert.equal(body.history.length,2);
+ const body=JSON.parse(seen.options.body);assert.equal(body.engine,"m-1");assert.equal(body.system,"system text");assert.equal(body.prompt,"user text");assert.equal(body.history.length,2);
  assert.equal(r.text,"custom reply");
 });
 test("custom proxy reports invalid request templates",async()=>{
