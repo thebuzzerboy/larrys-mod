@@ -52,6 +52,10 @@ The outputs are placed in `dist/`.
 
 This is a debug APK, not a Play Store-signed release.
 
+## Backend foundation (Cloudflare)
+
+A first backend implementation is being developed on the `feature/cloudflare-backend` branch. It includes a Cloudflare Worker API, R2-backed Workshop upload/list/download/delete endpoints, Supabase HS256 access-token verification for write operations, and an initial Durable Objects WebSocket room relay. It is not deployed; see [backend setup and API documentation](backend/README.md). The backend tests run separately in GitHub Actions. Moderation, malware scanning, search/rating indexes, production quotas, authoritative multiplayer simulation, and the server-side AI gateway remain future work.
+
 ## AI provider configuration & security
 
 AI provider settings are configured inside the game. Never commit API keys to this repository, embed a private key into a distributable, or post keys in issues/chats. Direct provider requests from a browser/WebView may be affected by CORS or provider policies; a private HTTPS proxy is the more reliable production architecture.
