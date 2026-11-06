@@ -8,7 +8,8 @@
   "scripts": {
     "prepare:assets": "node scripts/prepare-assets.js",
     "start": "npm run prepare:assets && electron .",
-    "dist:win": "npm run prepare:assets && electron-builder --win nsis portable --publish never"
+    "dist:win": "npm run prepare:assets && electron-builder --win nsis portable --publish never",
+    "test": "node --test scripts/test-ai-coordinator.js"
   },
   "devDependencies": {
     "cannon": "0.6.2",
