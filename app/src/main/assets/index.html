@@ -15,7 +15,7 @@ button{background:#2b303b;border:1px solid var(--line);padding:8px 10px;border-r
 button:active,button.on{background:var(--or);color:#111;border-color:var(--or)}
 :focus-visible{outline:2px solid var(--or);outline-offset:1px}
 #top{position:fixed;top:0;left:0;right:0;display:flex;align-items:center;gap:6px;padding:calc(env(safe-area-inset-top,0px) + 6px) 8px 6px;pointer-events:none}
-#top b{color:var(--or);font-size:14px}#stat{flex:1;opacity:.8;font-size:11px;text-shadow:0 1px 2px #000}
+#top b{color:var(--or);font-size:14px}#stat{flex:1;opacity:.8;font-size:11px;text-shadow:0 1px 2px #000}.devbadge{font-size:9px;letter-spacing:.45px;color:#ffbd55;border:1px solid #98631a;border-radius:3px;padding:3px 5px;white-space:nowrap;opacity:.9}
 #hp{position:fixed;left:10px;top:calc(env(safe-area-inset-top,0px) + 46px);width:140px;height:16px;background:#000a;border:1px solid #000;pointer-events:none}
 #hp i{display:block;height:100%;background:#4c4;width:100%}#hp[hidden],#cross[hidden],#hud[hidden],#dead[hidden],#js[hidden],#bar[hidden]{display:none}
 #log{position:fixed;left:10px;top:calc(env(safe-area-inset-top,0px) + 68px);width:min(60%,320px);pointer-events:none;font-size:12px;text-shadow:0 1px 2px #000,0 0 3px #000}
@@ -94,7 +94,7 @@ button:active,button.on{background:var(--or);color:#111;border-color:var(--or)}
 </style></head>
 <body>
 <canvas id="c"></canvas>
-<div id="top"><b>SANDBOX PROTOCOL</b><span id="stat"></span><button id="bMode">Play</button><button id="bMenu">Menu</button><button id="bAI">AIs</button><button id="gear">Setup</button></div>
+<div id="top"><b>SANDBOX PROTOCOL</b><span id="stat"></span><button id="bMode">Play</button><button id="bMenu">Menu</button><button id="bAI">AIs</button><button id="gear">Setup</button><span class="devbadge">DEV BUILD AUTHORISED</span></div>
 <div id="hp" hidden><i></i></div><div id="log"></div><div id="cross" hidden></div><div id="toast"></div><div id="js" hidden><div id="jk"></div></div>
 <div id="hud" hidden><div id="tools"></div><button id="bFire">Fire</button><button id="bJump">Jump</button><button id="bAlt">Freeze</button><button id="bRotate">Rotate</button><button id="bSprint">Sprint</button><button id="bView">View</button></div>
 <div id="dead" hidden></div><div id="mobileTop"><button id="spawnOpen">☰ Spawn</button><button id="pauseOpen">Ⅱ</button></div><div id="spawnMenu" class="gmenu" hidden><header><b>SPAWN MENU</b><button id="spawnClose">✕</button></header><nav><button class="tab active" data-tab="propsTab">Props</button><button class="tab" data-tab="toolsTab">Tools</button><button class="tab" data-tab="weaponsTab">Weapons</button><button class="tab" data-tab="npcsTab">NPCs</button></nav><section id="propsTab"><div id="spawnGrid"></div></section><section id="toolsTab" hidden><p>Toolgun modes</p><div id="toolModes"></div></section><section id="weaponsTab" hidden><p>Weapon selection</p><div id="weaponGrid"></div></section><section id="npcsTab" hidden><p>AI characters</p><button id="openAI">Manage AI players</button></section></div><div id="pauseMenu" class="gmenu" hidden><header><b>PAUSED</b><button id="pauseClose">✕</button></header><button id="resumeGame">Resume</button><button id="pauseSpawn">Spawn menu</button><button id="pauseAI">AI players</button><button id="pauseSettings">Settings</button><button id="quitGame">Return to menu</button></div><div id="weapon" hidden></div><div id="hint" hidden></div>
