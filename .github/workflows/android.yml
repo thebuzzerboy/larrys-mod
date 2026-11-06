@@ -2,9 +2,9 @@ name: Build Sandbox Protocol Android APK
 on:
   workflow_dispatch:
   pull_request:
-    branches: [ main, master, feature/local-mods-experiment ]
+    branches: [ main, master, feature/platform-controls, feature/local-mods-experiment ]
   push:
-    branches: [ main, master ]
+    branches: [ main, master, feature/local-mods-experiment ]
     paths:
       - 'app/**'
       - 'app/build.gradle'
