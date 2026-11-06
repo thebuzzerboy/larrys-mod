@@ -51,7 +51,7 @@ button:active,button.on{background:var(--or);color:#111;border-color:var(--or)}
 .modal input[type=text],.modal input[type=password],.modal select,.modal textarea{background:#0f1116;border:1px solid var(--line);padding:8px;border-radius:3px}
 .modal small{opacity:.65;line-height:1.4}.ar{display:flex;justify-content:space-between;align-items:center;gap:8px}.pr{display:flex;flex-wrap:wrap;gap:6px}
 
-#mobileTop{position:fixed;top:env(safe-area-inset-top,8px);left:10px;z-index:30;display:flex;gap:8px}
+#mobileTop{display:none;position:fixed;top:env(safe-area-inset-top,8px);left:10px;z-index:30;display:flex;gap:8px}
 #mobileTop button{background:#252a33eF;border:1px solid #8994a3;color:#fff;border-radius:8px;padding:10px 14px;font-weight:800}
 .gmenu{position:fixed;z-index:80;left:4vw;right:4vw;top:7vh;bottom:7vh;max-width:760px;margin:auto;background:rgba(19,22,29,.97);border:1px solid #697585;border-radius:12px;box-shadow:0 12px 50px #000b;color:#f4f5f7;padding:12px;overflow:auto;touch-action:pan-y}
 .gmenu header{display:flex;align-items:center;justify-content:space-between;background:#343b47;padding:10px;border-radius:7px;margin-bottom:10px}
@@ -69,7 +69,7 @@ button:active,button.on{background:var(--or);color:#111;border-color:var(--or)}
  #top{left:7px;right:7px;gap:4px;padding-top:calc(env(safe-area-inset-top,0px) + 5px)}
  #top b{font-size:11px} #stat{font-size:9px;min-width:0}
  #top button{padding:7px 8px;font-size:11px;min-height:34px}
- #mobileTop{top:calc(env(safe-area-inset-top,0px) + 48px);left:8px;z-index:35}
+ #mobileTop{display:flex;top:calc(env(safe-area-inset-top,0px) + 48px);left:8px;z-index:35}
  #mobileTop button{padding:8px 11px;min-height:38px}
  #tools{position:fixed;left:8px;right:8px;top:auto;bottom:calc(env(safe-area-inset-bottom,0px) + 7px);width:auto;display:flex;flex-direction:row;overflow-x:auto;gap:5px;padding:5px;background:#171b22e8;border:1px solid #ffffff33;border-radius:9px;z-index:29}
  #tools button{flex:0 0 auto;min-width:68px;min-height:42px;font-size:11px}
@@ -94,7 +94,7 @@ button:active,button.on{background:var(--or);color:#111;border-color:var(--or)}
 </style></head>
 <body>
 <canvas id="c"></canvas>
-<div id="top"><b>SANDBOX PROTOCOL</b><span id="stat"></span><button id="bMode">Play</button><button id="bMenu">Menu</button><button id="bAI">AIs</button><button id="gear">Setup</button></div>
+<div id="top"><b>SANDBOX PROTOCOL</b><span id="stat"></span><button id="bMode">Play</button><button id="bSpawnMenu">Spawn</button><button id="bMenu">Menu</button><button id="bAI">AIs</button><button id="gear">Setup</button></div>
 <div id="hp" hidden><i></i></div><div id="log"></div><div id="cross" hidden></div><div id="toast"></div><div id="js" hidden><div id="jk"></div></div>
 <div id="hud" hidden><div id="tools"></div><button id="bFire">Fire</button><button id="bJump">Jump</button><button id="bAlt">Freeze</button><button id="bRotate">Rotate</button><button id="bSprint">Sprint</button><button id="bView">View</button></div>
 <div id="dead" hidden></div><div id="mobileTop"><button id="spawnOpen">☰ Spawn</button><button id="pauseOpen">Ⅱ</button></div><div id="spawnMenu" class="gmenu" hidden><header><b>SPAWN MENU</b><button id="spawnClose">✕</button></header><nav><button class="tab active" data-tab="propsTab">Props</button><button class="tab" data-tab="toolsTab">Tools</button><button class="tab" data-tab="weaponsTab">Weapons</button><button class="tab" data-tab="npcsTab">NPCs</button></nav><section id="propsTab"><div id="spawnGrid"></div></section><section id="toolsTab" hidden><p>Toolgun modes</p><div id="toolModes"></div></section><section id="weaponsTab" hidden><p>Weapon selection</p><div id="weaponGrid"></div></section><section id="npcsTab" hidden><p>AI characters</p><button id="openAI">Manage AI players</button></section></div><div id="pauseMenu" class="gmenu" hidden><header><b>PAUSED</b><button id="pauseClose">✕</button></header><button id="resumeGame">Resume</button><button id="pauseSpawn">Spawn menu</button><button id="pauseAI">AI players</button><button id="pauseSettings">Settings</button><button id="quitGame">Return to menu</button></div><div id="weapon" hidden></div><div id="hint" hidden></div>
@@ -621,6 +621,7 @@ const up=e=>{
 };
 cv.onpointerup=up;cv.onpointercancel=up;cv.addEventListener('wheel',e=>{if(hold&&rotMode){rotateStep+=Math.sign(e.deltaY)*Math.PI/12;e.preventDefault()}else if(mode==='play'&&Math.abs(e.deltaY)>0){tool=(tool+(e.deltaY>0?1:TOOLS.length-1))%TOOLS.length;buildWeapon(tool);[...$('tools').children].forEach((c,j)=>c.classList.toggle('on',j===tool));e.preventDefault()}},{passive:false});
 onkeydown=e=>{const k=e.key.toLowerCase();if(document.activeElement.tagName==='INPUT'||document.activeElement.tagName==='TEXTAREA')return;
+  if(k==='escape'){if(!$('pauseMenu').hidden)closePause();else if(!$('spawnMenu').hidden)closeSpawn();else openPause();e.preventDefault();return}if(k==='f1'){openSpawn();e.preventDefault();return}
   if(k in keys)keys[k]=1;if(k==='shift')keys.shift=1;if(/^[1-7]$/.test(k)){tool=+k-1;buildWeapon(tool);[...$('tools').children].forEach((c,j)=>c.classList.toggle('on',j===tool))}if(k===' ')jumpReq=true;if(k==='f')fireDown=true;if(k==='e')altReq=true;if(k==='r'){rotMode=!rotMode;$('bRotate').classList.toggle('on',rotMode);toast(rotMode?'Physgun rotation on':'Physgun rotation off')}};
 onkeyup=e=>{const k=e.key.toLowerCase();if(k in keys)keys[k]=0;if(k==='shift')keys.shift=0;if(k==='f')fireDown=false};
 
@@ -630,10 +631,11 @@ function setMode(m){
   mode=m;const pl=m==='play';
   if(pl&&!me){me=mkActor({name:'You',color:'#3b82f6',isPlayer:true});$('hp').hidden=false;updSpr(me)}
   if(pl&&me){camYaw=me.yaw;$('bar').hidden=true}else $('bar').hidden=false;
-  $('hud').hidden=!pl;$('cross').hidden=!pl;$('weapon').hidden=!(pl&&fpv);$('hint').hidden=!pl;$('hint').textContent=matchMedia('(pointer:coarse)').matches?'Left side: move · right side: look · Fire / Jump / Sprint · Spawn for props and tools':'WASD move · Shift sprint · Space jump · F fire · E freeze/drop · R rotate · 1–7 tools';$('bMode').textContent=pl?'Free cam':'Play';$('bMode').classList.toggle('on',pl);
+  $('hud').hidden=!pl;$('cross').hidden=!pl;$('weapon').hidden=!(pl&&fpv);$('hint').hidden=!pl;$('hint').textContent=matchMedia('(pointer:coarse)').matches?'Left side: move · right side: look · Fire / Jump / Sprint · Spawn for props and tools':'WASD move · mouse drag look · Shift sprint · Space jump · F fire · E freeze/drop · R rotate · 1–7 tools · F1 spawn · Esc pause';$('bMode').textContent=pl?'Free cam':'Play';$('bMode').classList.toggle('on',pl);
   if(me){me.g.visible=me.alive&&!(pl&&fpv);if(!pl)me.face=null}
 }
 $('bMode').onclick=()=>setMode(mode==='play'?'cam':'play');
+$('bSpawnMenu').onclick=openSpawn;
 $('bMenu').onclick=()=>{const b=$('bar');b.hidden=!b.hidden;if(mode==='play')$('hud').hidden=!b.hidden};
 $('bView').onclick=()=>{fpv=!fpv;if(me)me.g.visible=me.alive&&!fpv};
 $('bJump').onpointerdown=()=>{jumpReq=true};
@@ -641,7 +643,7 @@ $('bSprint').onclick=()=>{sprintOn=!sprintOn;$('bSprint').classList.toggle('on',
 $('bRotate').onclick=()=>{if(hold){rotMode=true;rotateStep+=Math.PI/12;$('bRotate').classList.add('on');toast('Prop rotated 15°')}else{rotMode=!rotMode;$('bRotate').classList.toggle('on',rotMode);toast(rotMode?'Rotation mode on · grab a prop and tap Rotate':'Rotation mode off')}};
 $('bAlt').onpointerdown=()=>{altReq=true};
 let toolMode='Weld',paused=false;
-function openSpawn(){if(mode!=='play')return;paused=true;fireDown=false;prevFire=false;if(hold){const p=hold.p,was=hold.wasFrozen;hold=null;setStatic(p,was)}$('spawnMenu').hidden=false;$('pauseMenu').hidden=true}
+function openSpawn(){paused=true;fireDown=false;prevFire=false;if(hold){const p=hold.p,was=hold.wasFrozen;hold=null;setStatic(p,was)}$('spawnMenu').hidden=false;$('pauseMenu').hidden=true}
 function closeSpawn(){$('spawnMenu').hidden=true;paused=false}
 function openPause(){paused=true;$('pauseMenu').hidden=false;$('spawnMenu').hidden=true;fireDown=false;prevFire=false;if(hold){const p=hold.p,was=hold.wasFrozen;hold=null;setStatic(p,was)}keys.w=keys.a=keys.s=keys.d=0}
 function closePause(){paused=false;$('pauseMenu').hidden=true}
