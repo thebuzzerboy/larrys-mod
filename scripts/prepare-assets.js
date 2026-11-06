@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 const root = path.resolve(__dirname, '..');
+require('child_process').execFileSync(process.execPath, [path.join(__dirname, 'build-knowledge.js')], { stdio: 'inherit' });
 const source = path.join(root, 'app', 'src', 'main', 'assets', 'index.html');
 const outDir = path.join(root, 'desktop-assets');
 const vendorDir = path.join(outDir, 'vendor');
