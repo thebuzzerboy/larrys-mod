@@ -110,7 +110,7 @@ button:active,button.on{background:var(--or);color:#111;border-color:var(--or)}
   <label>API key<input id="kKey" type="password" autocomplete="off" placeholder="Paste your provider API key"></label>
   <label>Model / model ID<input id="kModel" type="text" autocapitalize="off"></label>
   <label>Endpoint path (optional)<input id="kPath" type="text" placeholder="Protocol default"></label>
-  <label>Custom request JSON template<textarea id="kBody" rows="3" placeholder='{"model":"{{model}}","messages":{{messages}}}'></textarea></label>
+  <label>Custom request JSON template<textarea id="kBody" rows="3" placeholder='{"model":{{model}},"messages":{{messages}}}'></textarea></label>
   <label>Custom response text path<input id="kResponsePath" type="text" value="choices.0.message.content"></label>
   <label>Custom auth header<input id="kAuthHeader" type="text" value="Authorization"></label>
   <label>Custom auth prefix<input id="kAuthPrefix" type="text" value="Bearer "></label>
