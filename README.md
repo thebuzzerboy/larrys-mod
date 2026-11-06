@@ -23,8 +23,19 @@ Sandbox Protocol is a browser-based 3D sandbox project with physics, props, play
 - AI characters with configurable provider/persona settings
 - In-game menus and settings
 - Touch-oriented controls (Android)
+- Experimental local mod manager and developer-only StarCoder2 AI Mod Studio
 
 Workshop/community sharing and multiplayer are **not confirmed as implemented** in the current source. Please do not assume they are available.
+
+## Experimental AI Mod Studio
+
+This developer-only branch adds an **AI Mod Studio** entry point. It connects to a separately running OpenAI-compatible local endpoint configured with StarCoder2, uses a generated searchable source index plus a reviewed game-knowledge bootstrap for each generation request, validates the returned mod JSON, and exports a package for import through **Mods**. StarCoder2 weights and an inference runtime are not bundled or automatically installed. Structured props are the default; optional JavaScript scripts run in an isolated iframe with a tiny experimental bridge (`api.log`, `api.spawn`). The script sandbox is not production-hardened and has no hard CPU quota.
+
+The resource picker recognizes GLB/GLTF/OBJ, PNG/JPG/WEBP, WAV/OGG/MP3, JSON, Markdown, text and source files. At this stage, imported resources are only catalogued by metadata and optional user notes; binary files are not passed to the model, stored in the mod, or rendered in-game. See [docs/AI_MOD_STUDIO.md](docs/AI_MOD_STUDIO.md), [docs/GAME_KNOWLEDGE.md](docs/GAME_KNOWLEDGE.md), and [docs/LOCAL_MODS.md](docs/LOCAL_MODS.md).
+
+## AI provider and custom proxy support
+
+The developer build supports LiteRouter and LoreLLM presets, plus OpenAI-compatible, Anthropic Messages, Gemini generateContent, and configurable custom JSON proxy protocols. The global connection and each AI character can use separate endpoints/models; credentials remain session-only. See [docs/AI_PROVIDERS.md](docs/AI_PROVIDERS.md) for exact endpoint formats, custom request/response templates, quota notes, and security limitations.
 
 ## Windows build (GitHub Actions)
 

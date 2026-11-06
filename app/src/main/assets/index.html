@@ -5,6 +5,7 @@
 <title>Sandbox Protocol — Test Arena</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
+<script src="ai/provider-adapters.js"></script>
 <style>
 :root{--panel:rgba(20,22,28,.9);--line:#4a4f5c;--or:#f7a21b;--tx:#e8e8ea}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
@@ -96,22 +97,28 @@ button:active,button.on{background:var(--or);color:#111;border-color:var(--or)}
 </style></head>
 <body>
 <canvas id="c"></canvas>
-<div id="top"><b>SANDBOX PROTOCOL</b><span id="stat"></span><button id="bMode">Play</button><button id="bSpawnMenu">Spawn</button><button id="bChatLog">Chat log</button><button id="bMenu">Menu</button><button id="bAI">AIs</button><button id="gear">Setup</button></div>
+<div id="top"><b>SANDBOX PROTOCOL</b><span id="stat"></span><button id="bMode">Play</button><button id="bSpawnMenu">Spawn</button><button id="bMods">Mods</button><button id="bChatLog">Chat log</button><button id="bMenu">Menu</button><button id="bAI">AIs</button><button id="gear">Setup</button></div>
 <div id="hp" hidden><i></i></div><div id="log"></div><div id="cross" hidden></div><div id="toast"></div><div id="js" hidden><div id="jk"></div></div>
 <div id="hud" hidden><div id="tools"></div><button id="bFire">Fire</button><button id="bJump">Jump</button><button id="bAlt">Freeze</button><button id="bRotate">Rotate</button><button id="bSprint">Sprint</button><button id="bView">View</button></div>
-<div id="chatLogModal" class="modal" hidden><div style="max-width:760px"><b style="color:var(--or)">CHAT LOG</b><div id="chatLogEntries" style="max-height:55vh;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;background:#0f1116;border:1px solid var(--line);padding:10px;margin:10px 0"></div><button id="chatLogClose" class="on">Close</button></div></div><div id="dead" hidden></div><div id="mobileTop"><button id="spawnOpen">☰ Spawn</button><button id="pauseOpen">Ⅱ</button></div><div id="spawnMenu" class="gmenu" hidden><header><b>SPAWN MENU</b><button id="spawnClose">✕</button></header><nav><button class="tab active" data-tab="propsTab">Props</button><button class="tab" data-tab="toolsTab">Tools</button><button class="tab" data-tab="weaponsTab">Weapons</button><button class="tab" data-tab="npcsTab">NPCs</button></nav><section id="propsTab"><div id="spawnGrid"></div></section><section id="toolsTab" hidden><p>Toolgun modes</p><div id="toolModes"></div></section><section id="weaponsTab" hidden><p>Weapon selection</p><div id="weaponGrid"></div></section><section id="npcsTab" hidden><p>AI characters</p><button id="openAI">Manage AI players</button></section></div><div id="pauseMenu" class="gmenu" hidden><header><b>PAUSED</b><button id="pauseClose">✕</button></header><button id="resumeGame">Resume</button><button id="pauseSpawn">Spawn menu</button><button id="pauseAI">AI players</button><button id="pauseSettings">Settings</button><button id="quitGame">Return to menu</button></div><div id="weapon" hidden></div><div id="hint" hidden></div>
+<div id="modsModal" class="modal" hidden><div style="max-width:760px"><b style="color:var(--or)">LOCAL MODS</b><small>Mods are imported from files on this device and saved in this browser profile. Structured JSON is the default; optional scripts use an experimental restricted iframe API.</small><div id="modsList" style="display:flex;flex-direction:column;gap:8px;max-height:48vh;overflow:auto"></div><input id="modsFile" type="file" accept=".json,application/json" hidden><div class="pr"><button id="modsImport" class="on">Import mod JSON</button><button id="modsTemplate">Export example mod</button><button id="modsClose">Close</button></div><small>Experimental: procedural physics props and optional scripts are supported. Imported binary models, textures and audio are catalogued by the AI studio but are not loaded into the game yet.</small></div></div><div id="chatLogModal" class="modal" hidden><div style="max-width:760px"><b style="color:var(--or)">CHAT LOG</b><div id="chatLogEntries" style="max-height:55vh;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;background:#0f1116;border:1px solid var(--line);padding:10px;margin:10px 0"></div><button id="chatLogClose" class="on">Close</button></div></div><div id="dead" hidden></div><div id="mobileTop"><button id="spawnOpen">☰ Spawn</button><button id="pauseOpen">Ⅱ</button></div><div id="spawnMenu" class="gmenu" hidden><header><b>SPAWN MENU</b><button id="spawnClose">✕</button></header><nav><button class="tab active" data-tab="propsTab">Props</button><button class="tab" data-tab="toolsTab">Tools</button><button class="tab" data-tab="weaponsTab">Weapons</button><button class="tab" data-tab="npcsTab">NPCs</button></nav><section id="propsTab"><div id="spawnGrid"></div></section><section id="toolsTab" hidden><p>Toolgun modes</p><div id="toolModes"></div></section><section id="weaponsTab" hidden><p>Weapon selection</p><div id="weaponGrid"></div></section><section id="npcsTab" hidden><p>AI characters</p><button id="openAI">Manage AI players</button></section></div><div id="pauseMenu" class="gmenu" hidden><header><b>PAUSED</b><button id="pauseClose">✕</button></header><button id="resumeGame">Resume</button><button id="pauseSpawn">Spawn menu</button><button id="pauseAI">AI players</button><button id="pauseSettings">Settings</button><button id="quitGame">Return to menu</button></div><div id="weapon" hidden></div><div id="hint" hidden></div>
 <div id="bar"><div id="props"></div><div id="row"><input id="inp" placeholder="Build a prop, say something, or @Name to whisper" enterkeyhint="send" autocomplete="off"><button id="bSpawn" class="on">Build</button><button id="bChat">Say</button></div></div>
 <div id="set" class="modal" hidden><div>
   <b style="color:var(--or)">Default AI provider</b>
-  <label>Provider<select id="kPre"><option value="gemini">Google Gemini</option><option value="openrouter">OpenRouter — Nemotron 3 Ultra (free preset)</option><option value="openai">OpenAI</option><option value="custom">Custom (OpenAI-compatible)</option></select></label>
+  <label>Connection<select id="kPre"><option value="literouter">LiteRouter</option><option value="lorellm">LoreLLM (LoreBary)</option><option value="openrouter">OpenRouter</option><option value="gemini">Google Gemini</option><option value="openai">OpenAI</option><option value="custom">Custom proxy</option></select></label>
+  <label>API format<select id="kProtocol"><option value="openai">OpenAI Chat Completions-compatible</option><option value="anthropic">Anthropic Messages</option><option value="gemini">Gemini generateContent</option><option value="custom">Custom JSON request/response</option></select></label>
   <label>Base URL<input id="kUrl" type="text" autocapitalize="off"></label>
-  <label>API key<input id="kKey" type="password" autocomplete="off" placeholder="Paste a NEW OpenRouter key"></label>
-  <label>Model<input id="kModel" type="text" autocapitalize="off"></label>
+  <label>API key<input id="kKey" type="password" autocomplete="off" placeholder="Paste your provider API key"></label>
+  <label>Model / model ID<input id="kModel" type="text" autocapitalize="off"></label>
+  <label>Endpoint path (optional)<input id="kPath" type="text" placeholder="Protocol default"></label>
+  <label>Custom request JSON template<textarea id="kBody" rows="3" placeholder='{"model":{{model}},"messages":{{messages}}}'></textarea></label>
+  <label>Custom response text path<input id="kResponsePath" type="text" value="choices.0.message.content"></label>
+  <label>Custom auth header<input id="kAuthHeader" type="text" value="Authorization"></label>
+  <label>Custom auth prefix<input id="kAuthPrefix" type="text" value="Bearer "></label>
   <label style="flex-direction:row;align-items:center;gap:8px"><input id="kAuto" type="checkbox"> AIs act on their own</label>
   <label>Graphics<select id="kQ"><option value="low">Low (fastest)</option><option value="med">Medium</option><option value="high">High (shadows)</option></select></label>
   <label>AI think speed<select id="kPace"><option value="fast">Fast (about 4 s)</option><option value="norm">Normal (about 8 s)</option><option value="slow">Slow (about 15 s)</option></select></label>
   <label style="flex-direction:row;align-items:center;gap:8px"><input id="kSpy" type="checkbox"> Show AI whispers (spy mode)</label>
-  <small>Any /chat/completions server works. Each AI can override model, URL and key in the AIs panel. API keys are kept only in memory for this session and are not saved. For production, use a private HTTPS proxy.</small>
+  <small>Choose the API format your proxy actually supports. Custom JSON mode lets you define the request body with {{model}}, {{system}}, {{user}} and {{messages}} placeholders, plus a dot-separated response text path. Each AI can override its connection. API keys are kept only in memory for this session and are not saved. LoreLLM external API currently documents 200 requests per day shared across the account; several autonomous bots can use that allowance quickly.</small>
   <button id="kClose" class="on">Save</button>
 </div></div>
 <div id="ai" class="modal" hidden><div>
@@ -119,8 +126,10 @@ button:active,button.on{background:var(--or);color:#111;border-color:var(--or)}
   <div id="aiList"></div><div class="pr" id="aiPre"></div>
   <label>Name<input id="aN" type="text"></label>
   <label>Personality<textarea id="aP" rows="2"></textarea></label>
+  <label>API format<select id="aProtocol"><option value="">Use global format</option><option value="openai">OpenAI-compatible</option><option value="anthropic">Anthropic Messages</option><option value="gemini">Gemini generateContent</option><option value="custom">Custom JSON proxy</option></select></label>
   <label>Model (optional)<input id="aM" type="text" autocapitalize="off"></label>
   <label>Base URL (optional)<input id="aU" type="text" autocapitalize="off"></label>
+  <label>Endpoint path (optional)<input id="aPath" type="text" autocapitalize="off"></label>
   <label>API key (optional)<input id="aK" type="password" autocomplete="off"></label>
   <div class="pr"><button id="aAdd" class="on">Add custom AI</button><button id="aClose">Close</button></div>
 </div></div>
@@ -130,16 +139,18 @@ else{
 const $=id=>document.getElementById(id);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,+v||0)),rnd=(a,b)=>a+Math.random()*(b-a);
 const {Vec3,Quaternion}=CANNON,D=Math.PI/180,HEX=/^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
-const PRE={gemini:['https://generativelanguage.googleapis.com/v1beta/openai','gemini-2.5-flash'],openrouter:['https://openrouter.ai/api/v1','nvidia/nemotron-3-ultra-550b-a55b:free'],openai:['https://api.openai.com/v1','gpt-4o-mini'],custom:['','']};
+const PRE={literouter:['https://api.literouter.com/v1',''],lorellm:['https://api.lorebary.com/lorellm','LoreLLM'],gemini:['https://generativelanguage.googleapis.com/v1beta','gemini-2.5-flash'],openrouter:['https://openrouter.ai/api/v1',''],openai:['https://api.openai.com/v1','gpt-4o-mini'],custom:['','']};
 const PERS={
  Gordon:['#f7a21b','A goofy, friendly robot who loves building silly contraptions, stunts and jokes.'],
  Ayla:['#c050e0','An ambitious queen. Found a kingdom early, build a castle with static walls, towers and a throne room, recruit others and defend it.'],
  Brutus:['#d03a2a','An aggressive warlord. Hunt rivals, raid kingdoms, build turrets and trophies, taunt everyone.'],
  Sage:['#3aa86a','A calm architect and healer. Build healing stations, bridges and gardens, make peace and trade advice.']};
-const S={preset:'openrouter',url:PRE.openrouter[0],model:PRE.openrouter[1],key:'',auto:true,agents:null,q:'med',spy:true,pace:'norm'};
+const S={preset:'literouter',url:PRE.literouter[0],model:PRE.literouter[1],protocol:'openai',path:'',bodyTemplate:'',responsePath:'choices.0.message.content',authHeader:'Authorization',authPrefix:'Bearer ',key:'',auto:true,agents:null,q:'med',spy:true,pace:'norm'};
 try{Object.assign(S,JSON.parse(localStorage.getItem('lm4')||'{}'))}catch(e){}
 // API keys are session-only: never load or persist secrets in localStorage.
-if(S.preset==='gemini'&&S.url===PRE.gemini[0]&&S.model===PRE.gemini[1]){S.preset='openrouter';S.url=PRE.openrouter[0];S.model=PRE.openrouter[1]}
+if(S.preset==='gemini'&&S.url==='https://generativelanguage.googleapis.com/v1beta/openai'){S.url=PRE.gemini[0];S.protocol='gemini'}
+if(S.preset==='openrouter'&&S.url===PRE.openrouter[0]&&S.model==='nvidia/nemotron-3-ultra-550b-a55b:free'){S.preset='literouter';S.url=PRE.literouter[0];S.model=''}
+if(!S.protocol)S.protocol='openai';
 S.key='';if(Array.isArray(S.agents))S.agents.forEach(a=>{if(a)a.key=''});
 const save=()=>{try{const safe={...S,key:'',agents:Array.isArray(S.agents)?S.agents.map(a=>({...a,key:''})):S.agents};localStorage.setItem('lm4',JSON.stringify(safe))}catch(e){}};
 
@@ -279,6 +290,105 @@ function spawnPos(){
 }
 PROPS.forEach(p=>{const b=document.createElement('button');b.textContent=p.name;b.onclick=()=>mkProp(p,...spawnPos(),me?me.id:undefined);pr.append(b)});
 
+/* ---------- local, data-only mod loader ---------- */
+const LOCAL_MODS_KEY='sp_local_mods_v1';
+let localMods=[];
+const MOD_SHAPES=['box','sphere','cylinder','cone','torus'];
+function cleanMod(raw){
+  if(!raw||typeof raw!=='object'||Array.isArray(raw))throw new Error('Mod file must contain a JSON object.');
+  const id=String(raw.id||'').toLowerCase();
+  if(!/^[a-z0-9][a-z0-9_-]{1,39}$/.test(id))throw new Error('Mod id must be 2–40 lowercase letters, numbers, _ or -.');
+  const name=String(raw.name||'').trim().slice(0,40);
+  if(!name)throw new Error('Mod needs a name.');
+  if(!Array.isArray(raw.items)||!raw.items.length||raw.items.length>30)throw new Error('A mod must contain 1–30 items.');
+  const items=raw.items.map((it,i)=>{
+    if(!it||typeof it!=='object')throw new Error('Invalid item '+(i+1)+'.');
+    const parts=Array.isArray(it.parts)?it.parts.slice(0,12):[{shape:'box'}];
+    const safeParts=parts.map(part=>{
+      part=part&&typeof part==='object'?part:{};
+      const vec=(v,n,lim)=>Array.from({length:n},(_,k)=>clamp(Array.isArray(v)?Number(v[k]):(k===0?Number(v)||0:0),-lim,lim));
+      const size=Array.isArray(part.size)?part.size.slice(0,3).map(v=>clamp(v,.05,8)):[1];
+      return {shape:MOD_SHAPES.includes(part.shape)?part.shape:'box',size,
+        pos:vec(part.pos,3,8),rot:vec(part.rot,3,360),
+        color:HEX.test(part.color||'')?part.color:'#888888',
+        glow:HEX.test(part.glow||'')?part.glow:'#000000'};
+    });
+    return {name:String(it.name||('Item '+(i+1))).trim().slice(0,24)||('Item '+(i+1)),
+      mass:clamp(it.mass||1,.1,200),bounce:clamp(it.bounce,0,1),
+      behavior:BEHS.includes(it.behavior)?it.behavior:'none',
+      power:clamp(it.power||1,.3,3),static:it.static===true,parts:safeParts.length?safeParts:[{shape:'box'}],script:typeof it.script==='string'?it.script.slice(0,65536):''};
+  });
+  return {id,name,version:String(raw.version||'1.0.0').slice(0,20),
+    author:String(raw.author||'Unknown').slice(0,40),
+    description:String(raw.description||'').slice(0,240),items};
+}
+function saveLocalMods(){
+  try{localStorage.setItem(LOCAL_MODS_KEY,JSON.stringify(localMods))}catch(e){toast('Could not save mods: device storage is full or unavailable')}
+}
+try{
+  const saved=JSON.parse(localStorage.getItem(LOCAL_MODS_KEY)||'[]');
+  if(Array.isArray(saved))localMods=saved.map(x=>({mod:cleanMod(x.mod),enabled:x.enabled!==false}));
+}catch(e){localMods=[]}
+function spawnLocalModItem(mod,item){
+  const pos=spawnPos();mkProp(item,pos[0],pos[1],pos[2],me?me.id:undefined);
+  if(item.script&&window.SandboxModStudio){let spawned=0;try{const sandbox=window.SandboxModStudio.createScriptSandbox({onLog:m=>toast(item.name+': '+m),onError:m=>toast('Mod script: '+m),onSpawn:spec=>{if(spawned>=10)throw new Error('Per-run spawn limit reached');spawned++;const p=spawnPos();mkProp(spec,p[0],p[1],p[2],me?me.id:undefined)}});sandbox.run(item.script);setTimeout(()=>sandbox.destroy(),2500)}catch(err){toast('Script blocked: '+err.message)}}
+  toast('Spawned '+item.name+' · '+mod.name);
+}
+function renderLocalModSpawns(){
+  document.querySelectorAll('[data-local-mod-item]').forEach(b=>b.remove());
+  localMods.filter(x=>x.enabled).forEach(entry=>entry.mod.items.forEach((item,index)=>{
+    const b=document.createElement('button');b.textContent='＋ '+item.name+' · '+entry.mod.name;
+    b.dataset.localModItem='1';b.title='Local mod: '+entry.mod.name;
+    b.onclick=()=>spawnLocalModItem(entry.mod,item);$('spawnGrid').append(b);
+  }));
+}
+function renderLocalMods(){
+  const list=$('modsList');if(!list)return;list.textContent='';
+  if(!localMods.length){const empty=document.createElement('small');empty.textContent='No local mods installed yet. Export the example, edit its JSON, then import it.';list.append(empty)}
+  localMods.forEach((entry,index)=>{
+    const card=document.createElement('div');card.style.cssText='border:1px solid var(--line);background:#151922;padding:10px;border-radius:6px;display:flex;flex-direction:column;gap:6px';
+    const title=document.createElement('b');title.textContent=entry.mod.name+'  v'+entry.mod.version;
+    const meta=document.createElement('small');meta.textContent='by '+entry.mod.author+' · '+entry.mod.items.length+' item(s) · '+entry.mod.id;
+    const desc=document.createElement('small');desc.textContent=entry.mod.description||'No description';
+    const actions=document.createElement('div');actions.className='pr';
+    const toggle=document.createElement('button');toggle.textContent=entry.enabled?'Disable':'Enable';toggle.onclick=()=>{entry.enabled=!entry.enabled;saveLocalMods();renderLocalMods();renderLocalModSpawns()};
+    const remove=document.createElement('button');remove.textContent='Remove';remove.onclick=()=>{localMods.splice(index,1);saveLocalMods();renderLocalMods();renderLocalModSpawns()};
+    actions.append(toggle,remove);card.append(title,meta,desc,actions);list.append(card);
+  });
+  renderLocalModSpawns();
+}
+function openMods(){renderLocalMods();$('modsModal').hidden=false}
+$('bMods').onclick=openMods;$('modsClose').onclick=()=>$('modsModal').hidden=true;
+$('modsImport').onclick=()=>$('modsFile').click();
+$('modsFile').onchange=e=>{
+  const file=e.target.files&&e.target.files[0];if(!file)return;
+  if(file.size>256*1024){toast('Mod import failed: file exceeds 256 KiB');e.target.value='';return}
+  const reader=new FileReader();
+  reader.onload=()=>{
+    try{
+      const raw=JSON.parse(String(reader.result||'')),mod=cleanMod(raw);
+      if(localMods.some(x=>x.mod.id===mod.id))throw new Error('A mod with this id is already installed. Remove it before importing an update.');
+      localMods.push({mod,enabled:true});saveLocalMods();renderLocalMods();toast('Installed local mod: '+mod.name);
+    }catch(err){toast('Mod import failed: '+(err&&err.message?err.message:'invalid file'))}
+    e.target.value='';
+  };
+  reader.onerror=()=>{toast('Could not read the selected mod file');e.target.value=''};
+  reader.readAsText(file);
+};
+$('modsTemplate').onclick=()=>{
+  const sample={id:'my-first-mod',name:'My First Mod',version:'1.0.0',author:'Your name',
+    description:'A locally made example physics prop.',
+    items:[{name:'Neon Crate',mass:2,bounce:.35,behavior:'spin',power:1,
+      parts:[{shape:'box',size:[1.2,1.2,1.2],color:'#246bce',glow:'#143b88'},
+             {shape:'box',size:[1.3,.12,1.3],pos:[0,.5,0],color:'#63d8ff',glow:'#246bce'}]}]};
+  const blob=new Blob([JSON.stringify(sample,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='sandbox-protocol-example-mod.json';a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+};
+renderLocalModSpawns();
+// Spawn-menu buttons are built later in this script; refresh after page initialization too.
+window.addEventListener('load',renderLocalModSpawns);
+
 /* ---------- actors (player + AIs) ---------- */
 const actors=[],kingdoms=[],chat=[],dmgQ=[];let me=null,mode='cam',focus=null,inFlight=0,kid=1;
 try{const savedChat=JSON.parse(localStorage.getItem('sp_chat_log')||'[]');if(Array.isArray(savedChat))chat.push(...savedChat.filter(x=>typeof x==='string'))}catch(e){}
@@ -415,15 +525,12 @@ world.addEventListener('preStep',()=>{
 
 /* ---------- LLM ---------- */
 async function llm(sys,user,cfg){
+  cfg=cfg||{};
   if(!cfg.url)throw new Error('Set a base URL in Setup');
-  if(!cfg.key&&S.preset!=='custom'&&cfg.url===S.url)throw new Error('Add an API key in Setup');
-  const res=await fetch(cfg.url.replace(/\/+$/,'')+'/chat/completions',{method:'POST',
-    headers:Object.assign({'Content-Type':'application/json','HTTP-Referer':'https://sandbox-protocol.local','X-Title':"Sandbox Protocol"},cfg.key?{Authorization:'Bearer '+cfg.key}:{}),
-    body:JSON.stringify({model:cfg.model,temperature:1,messages:[{role:'system',content:sys},{role:'user',content:user}]})});
-  const j=await res.json().catch(()=>({}));
-  if(!res.ok)throw new Error((j.error&&(j.error.message||j.error))||('HTTP '+res.status));
-  const choice=j&&j.choices&&j.choices[0],content=choice&&choice.message&&choice.message.content;
-  const t=String(Array.isArray(content)?content.map(x=>x.text||'').join(' '):(content||'')).replace(/<think>[\s\S]*?<\/think>/g,'').replace(/^```(?:json)?\s*|\s*```$/gim,'').trim();
+  if(!cfg.model)throw new Error('Enter the exact model ID/name for this provider');
+  if(!window.SandboxAIProviders)throw new Error('AI provider adapters did not load');
+  const out=await window.SandboxAIProviders.request(cfg,sys,user);
+  const t=String(out.text||'').trim();
   const a=t.indexOf('{');if(a<0)throw new Error('The model did not return JSON');
   let depth=0,end=-1,inStr=false,esc=false;
   for(let i=a;i<t.length;i++){const ch=t[i];if(inStr){if(esc)esc=false;else if(ch==='\\\\')esc=true;else if(ch==='"')inStr=false;continue}
@@ -501,7 +608,7 @@ const hasProv=a=>(a.url||S.url)&&(a.key||S.key||S.preset==='custom'||a.url);
 async function think(a){
   if(a.busy)return;a.busy=true;inFlight++;
   try{
-    const r=await llm(sysFor(a),obs(a),{url:a.url||S.url,key:a.key||S.key,model:a.model||S.model});
+    const r=await llm(sysFor(a),obs(a),{url:a.url||S.url,key:a.key||S.key,model:a.model||S.model,protocol:a.protocol||S.protocol,path:a.path||S.path,bodyTemplate:S.bodyTemplate,responsePath:S.responsePath,authHeader:S.authHeader,authPrefix:S.authPrefix});
     if(typeof r.notes==='string')a.notes=r.notes.slice(0,700);if(r.say)say(a,r.say);a.q=(Array.isArray(r.actions)?r.actions:[]).filter(c=>c&&typeof c==='object'&&['move','goto','jump','tp','spawn','build','attack','stop','kingdom','join','delete','say','whisper','note','ally','unally','leave','banish','trigger','push'].includes(c.t)).slice(0,8).map(c=>{if(c.t==='move'){c.dx=clamp(c.dx,-1,1);c.dz=clamp(c.dz,-1,1);c.ms=clamp(c.ms||1000,200,3000)}if(c.t==='goto'||c.t==='tp'){if(c.x!=null)c.x=clamp(c.x,-55,55);if(c.z!=null)c.z=clamp(c.z,-55,55)}if(c.t==='push'){c.force=clamp(c.force||6,1,14);c.up=clamp(c.up==null?3:c.up,0,8)}return c});
   }catch(e){toast(a.name+': '+String(e.message).slice(0,70))}
   a.busy=false;inFlight--;const pc={fast:3500,norm:7000,slow:14000}[S.pace]||7000;a.next=(a.ev.length||a.inbox.length)?Date.now()+1500:Date.now()+pc+Math.random()*pc*.5;
@@ -680,13 +787,14 @@ async function run(kind){
 }
 $('bSpawn').onclick=()=>run('spawn');$('bChat').onclick=()=>run('chat');$('inp').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();run('spawn')}};
 $('bChatLog').onclick=()=>{renderChatLog();$('chatLogModal').hidden=false};$('chatLogClose').onclick=()=>{$('chatLogModal').hidden=true};
-$('kPre').onchange=()=>{const p=PRE[$('kPre').value];$('kUrl').value=p[0];$('kModel').value=p[1]};
-$('gear').onclick=()=>{$('kPre').value=S.preset;$('kUrl').value=S.url;$('kKey').value=S.key;$('kModel').value=S.model;$('kAuto').checked=S.auto;$('kQ').value=S.q;$('kPace').value=S.pace;$('kSpy').checked=S.spy;$('set').hidden=false};
-$('kClose').onclick=()=>{S.preset=$('kPre').value;S.url=$('kUrl').value.trim();S.key=$('kKey').value.trim();S.model=$('kModel').value.trim();S.auto=$('kAuto').checked;S.q=$('kQ').value;S.pace=$('kPace').value;S.spy=$('kSpy').checked;save();applyQ();$('set').hidden=true;if(paused)$('pauseMenu').hidden=false};
-function saveAgents(){S.agents=actors.filter(a=>a.isAI).map(a=>({name:a.name,color:a.color,persona:a.persona,model:a.model,url:a.url,key:''}));save()}
+$('kPre').onchange=()=>{const p=PRE[$('kPre').value];$('kUrl').value=p[0];$('kModel').value=p[1];$('kProtocol').value='openai';$('kPath').value='';$('kBody').value='';$('kResponsePath').value='choices.0.message.content';$('kAuthHeader').value='Authorization';$('kAuthPrefix').value='Bearer ';if($('kPre').value==='gemini')$('kProtocol').value='gemini'};
+$('kProtocol').onchange=()=>{const p=$('kProtocol').value;$('kPath').placeholder=p==='anthropic'?'/v1/messages':p==='gemini'?'/models/{model}:generateContent':p==='custom'?'Required custom endpoint path':'/chat/completions'};
+$('gear').onclick=()=>{$('kPre').value=S.preset;$('kProtocol').value=S.protocol||'openai';$('kUrl').value=S.url;$('kKey').value=S.key;$('kModel').value=S.model;$('kPath').value=S.path||'';$('kBody').value=S.bodyTemplate||'';$('kResponsePath').value=S.responsePath||'choices.0.message.content';$('kAuthHeader').value=S.authHeader||'Authorization';$('kAuthPrefix').value=S.authPrefix===undefined?'Bearer ':S.authPrefix;$('kAuto').checked=S.auto;$('kQ').value=S.q;$('kPace').value=S.pace;$('kSpy').checked=S.spy;$('set').hidden=false};
+$('kClose').onclick=()=>{S.preset=$('kPre').value;S.protocol=$('kProtocol').value;S.url=$('kUrl').value.trim();S.key=$('kKey').value.trim();S.model=$('kModel').value.trim();S.path=$('kPath').value.trim();S.bodyTemplate=$('kBody').value;S.responsePath=$('kResponsePath').value.trim()||'choices.0.message.content';S.authHeader=$('kAuthHeader').value.trim()||'Authorization';S.authPrefix=$('kAuthPrefix').value;S.auto=$('kAuto').checked;S.q=$('kQ').value;S.pace=$('kPace').value;S.spy=$('kSpy').checked;save();applyQ();$('set').hidden=true;if(paused)$('pauseMenu').hidden=false};
+function saveAgents(){S.agents=actors.filter(a=>a.isAI).map(a=>({name:a.name,color:a.color,persona:a.persona,model:a.model,url:a.url,protocol:a.protocol||'',path:a.path||'',key:''}));save()}
 function addAgent(c){
   if(actors.filter(a=>a.isAI).length>=4){toast('Max 4 AIs');return}
-  mkActor({name:String(c.name||'Bot').slice(0,14),color:c.color||'#'+Math.floor(rnd(0x555555,0xdddddd)).toString(16),persona:c.persona||'A curious free spirit.',model:c.model||'',url:c.url||'',key:c.key||'',isAI:true});
+  mkActor({name:String(c.name||'Bot').slice(0,14),color:c.color||'#'+Math.floor(rnd(0x555555,0xdddddd)).toString(16),persona:c.persona||'A curious free spirit.',model:c.model||'',url:c.url||'',protocol:c.protocol||'',path:c.path||'',key:c.key||'',isAI:true});
   saveAgents();renderAI();
 }
 function renderAI(){
@@ -697,7 +805,7 @@ function renderAI(){
   });
 }
 Object.keys(PERS).forEach(n=>{const b=document.createElement('button');b.textContent='Add '+n;b.onclick=()=>addAgent({name:n,color:PERS[n][0],persona:PERS[n][1]});$('aiPre').append(b)});
-$('aAdd').onclick=()=>{if(!$('aN').value.trim()){toast('Give the AI a name');return}addAgent({name:$('aN').value.trim(),persona:$('aP').value.trim(),model:$('aM').value.trim(),url:$('aU').value.trim(),key:$('aK').value.trim()});['aN','aP','aM','aU','aK'].forEach(i=>$(i).value='')};
+$('aAdd').onclick=()=>{if(!$('aN').value.trim()){toast('Give the AI a name');return}addAgent({name:$('aN').value.trim(),persona:$('aP').value.trim(),model:$('aM').value.trim(),url:$('aU').value.trim(),protocol:$('aProtocol').value,path:$('aPath').value.trim(),key:$('aK').value.trim()});['aN','aP','aM','aU','aPath','aK'].forEach(i=>$(i).value='')};
 $('bAI').onclick=()=>{renderAI();$('ai').hidden=false};$('aClose').onclick=()=>{$('ai').hidden=true;if(paused)$('pauseMenu').hidden=false};
 
 /* ---------- loop ---------- */
@@ -762,5 +870,5 @@ feed('Welcome to Sandbox Protocol. Tap Play to spawn in.','#f7a21b');
 toast('Free cam: drag to orbit, pinch to zoom, tap an actor to follow. Press Play to spawn in.');
 requestAnimationFrame(frame);
 }
-</script><script src="ai/ai-coordinator.js"></script>
+</script><script src="ai/ai-coordinator.js"></script><script src="ai/mod-studio-core.js"></script><script src="ai/game-knowledge.js"></script><script src="ai/game-source-index.js"></script><script src="ai/mod-studio-ui.js"></script>
 </body></html>
