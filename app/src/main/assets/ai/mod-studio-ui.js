@@ -15,7 +15,17 @@ function start(){
   for(let i=a;i<t.length;i++){const c=t[i];if(str){if(esc)esc=false;else if(c==="\\")esc=true;else if(c==='"')str=false;continue}if(c==='"'){str=true;continue}if(c==="{")depth++;if(c==="}"&&--depth===0)return JSON.parse(t.slice(a,i+1))}
   throw new Error("Incomplete JSON from model");
  }
- async function resources(){const files=$("msFiles").files,items=window.SandboxModStudio.inspectResources(files),notes=$("msNotes").value.trim();return items.map(x=>Object.assign(x,{description:notes}))}
+ async function resources(){
+  const files=Array.from($("msFiles").files),items=window.SandboxModStudio.inspectResources(files),notes=$("msNotes").value.trim();
+  const textual=/\\.(json|md|txt|js|ts)$/i;
+  return Promise.all(items.map(async(item,i)=>{
+    let excerpt="";
+    if(textual.test(files[i].name)){
+      excerpt=await new Promise(resolve=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result||"").slice(0,12000));reader.onerror=()=>resolve("[Could not read text resource]");reader.readAsText(files[i])});
+    }
+    return Object.assign(item,{description:[notes,excerpt].filter(Boolean).join("\\n\\n").slice(0,14000)});
+  }));
+}
  function validate(){const raw=JSON.parse($("msOutput").value),mod=window.SandboxModStudio.validateMod(raw);$("msOutput").value=JSON.stringify(mod,null,2);status("Package valid · "+mod.items.length+" item(s) · "+mod.items.filter(x=>x.script).length+" scripted item(s)");return mod}
  button.addEventListener("click",()=>{modal.hidden=false});$("msClose").onclick=()=>{modal.hidden=true};
  $("msValidate").onclick=()=>{try{validate()}catch(e){status("Validation failed: "+e.message)}};
