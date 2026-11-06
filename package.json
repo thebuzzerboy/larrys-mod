@@ -9,7 +9,7 @@
     "prepare:assets": "node scripts/prepare-assets.js",
     "start": "npm run prepare:assets && electron .",
     "dist:win": "npm run prepare:assets && electron-builder --win nsis portable --publish never",
-    "test": "npm run knowledge:build && node --check app/src/main/assets/ai/mod-studio-core.js && node --check app/src/main/assets/ai/mod-studio-ui.js && node --check app/src/main/assets/ai/game-knowledge.js && node --check scripts/build-knowledge.js && node --test scripts/test-ai-coordinator.js scripts/test-mod-studio.js",
+    "test": "npm run knowledge:build && node --check app/src/main/assets/ai/provider-adapters.js && node --check app/src/main/assets/ai/mod-studio-core.js && node --check app/src/main/assets/ai/mod-studio-ui.js && node --check app/src/main/assets/ai/game-knowledge.js && node --check scripts/build-knowledge.js && node --test scripts/test-ai-coordinator.js scripts/test-mod-studio.js scripts/test-provider-adapters.js",
     "knowledge:build": "node scripts/build-knowledge.js"
   },
   "devDependencies": {
