@@ -1,6 +1,6 @@
 (function(root){
 "use strict";
-function urlJoin(base,path){base=String(base||"").replace(/\\/+$/,"");path=String(path||"").trim();if(!path)return base;if(/^https?:\\/\\//i.test(path))return path;return base+(path.charAt(0)==="/"?"":"/")+path;}
+function urlJoin(base,path){base=String(base||"").replace(/\/+$/,"");path=String(path||"").trim();if(!path)return base;if(/^https?:\/\//i.test(path))return path;return base+(path.charAt(0)==="/"?"":"/")+path;}
 function getPath(obj,path){return String(path||"").split(".").filter(Boolean).reduce((v,k)=>v==null?undefined:v[k],obj);}
 function parseText(value){if(typeof value==="string")return value;if(Array.isArray(value))return value.map(x=>typeof x==="string"?x:x&&x.text||"").join("");return value==null?"":String(value);}
 async function request(cfg,sys,user,signal){
@@ -20,7 +20,7 @@ async function request(cfg,sys,user,signal){
   endpoint=urlJoin(base,cfg.path||"");if(key)headers[cfg.authHeader||"Authorization"]=(cfg.authPrefix===undefined?"Bearer ":cfg.authPrefix)+key;
   const template=String(cfg.bodyTemplate||'{"model":"{{model}}","messages":{{messages}}}');
   const replacements={"model":JSON.stringify(model),"system":JSON.stringify(String(sys||"")),"user":JSON.stringify(String(user||"")),"messages":JSON.stringify(messages)};
-  let raw=template.replace(/\\{\\{(model|system|user|messages)\\}\\}/g,(_,name)=>replacements[name]);
+  const raw=template.replace(/\{\{(model|system|user|messages)\}\}/g,(_,name)=>replacements[name]);
   try{body=JSON.parse(raw)}catch(e){throw new Error("Custom request body template is invalid JSON: "+e.message)}
  }else{
   endpoint=urlJoin(base,cfg.path||"/chat/completions");if(key)headers.Authorization="Bearer "+key;
@@ -34,7 +34,7 @@ async function request(cfg,sys,user,signal){
  else if(protocol==="gemini"){content=(data.candidates&&data.candidates[0]&&data.candidates[0].content&&data.candidates[0].content.parts||[]).map(x=>x.text||"").join("");}
  else if(protocol==="custom"){content=getPath(data,cfg.responsePath||"choices.0.message.content");returnedModel=data.model||model;}
  else{content=data&&data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content;returnedModel=data.model||model;}
- content=parseText(content).replace(/<think>[\\s\\S]*?<\\/think>/g,"").trim();
+ content=parseText(content).replace(/<think>[\s\S]*?<\/think>/g,"").trim();
  if(!content)throw new Error("Provider response did not contain text. Check its response format/path.");
  return {text:content,model:returnedModel};
 }
