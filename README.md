@@ -33,6 +33,10 @@ This developer-only branch adds an **AI Mod Studio** entry point. It connects to
 
 The resource picker recognizes GLB/GLTF/OBJ, PNG/JPG/WEBP, WAV/OGG/MP3, JSON, Markdown, text and source files. At this stage, imported resources are only catalogued by metadata and optional user notes; binary files are not passed to the model, stored in the mod, or rendered in-game. See [docs/AI_MOD_STUDIO.md](docs/AI_MOD_STUDIO.md), [docs/GAME_KNOWLEDGE.md](docs/GAME_KNOWLEDGE.md), and [docs/LOCAL_MODS.md](docs/LOCAL_MODS.md).
 
+## AI provider and custom proxy support
+
+The developer build supports LiteRouter and LoreLLM presets, plus OpenAI-compatible, Anthropic Messages, Gemini generateContent, and configurable custom JSON proxy protocols. The global connection and each AI character can use separate endpoints/models; credentials remain session-only. See [docs/AI_PROVIDERS.md](docs/AI_PROVIDERS.md) for exact endpoint formats, custom request/response templates, quota notes, and security limitations.
+
 ## Windows build (GitHub Actions)
 
 1. Open the repository's **Actions** tab.
