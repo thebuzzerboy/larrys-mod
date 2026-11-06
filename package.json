@@ -1,0 +1,36 @@
+{
+  "name": "sandbox-protocol",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Windows desktop wrapper for Sandbox Protocol",
+  "main": "electron/main.js",
+  "scripts": {
+    "prepare:assets": "node scripts/prepare-assets.js",
+    "start": "npm run prepare:assets && electron .",
+    "dist:win": "npm run prepare:assets && electron-builder --win nsis portable"
+  },
+  "devDependencies": {
+    "cannon": "0.6.2",
+    "electron": "^35.0.0",
+    "electron-builder": "^26.0.0",
+    "three": "0.128.0"
+  },
+  "build": {
+    "appId": "com.sandboxprotocol.game",
+    "productName": "Sandbox Protocol",
+    "directories": { "output": "dist" },
+    "files": [
+      "electron/**/*",
+      "desktop-assets/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": ["nsis", "portable"],
+      "artifactName": "Sandbox-Protocol-${version}-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}
