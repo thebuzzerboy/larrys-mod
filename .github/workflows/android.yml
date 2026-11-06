@@ -1,4 +1,4 @@
-name: Build Larry's Mod Android APK
+name: Build Sandbox Protocol Android APK
 on:
   workflow_dispatch:
   push:
@@ -34,10 +34,9 @@ jobs:
           sed -i 's#https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js#vendor/cannon.min.js#g' index.html
       - name: Build debug APK
         run: gradle --no-daemon :app:assembleDebug
-        working-directory: .
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: larrys-mod-debug-apk
+          name: sandbox-protocol-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
