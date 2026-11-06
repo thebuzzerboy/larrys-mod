@@ -374,6 +374,8 @@ $('modsTemplate').onclick=()=>{
   setTimeout(()=>URL.revokeObjectURL(url),1000);
 };
 renderLocalModSpawns();
+// Spawn-menu buttons are built later in this script; refresh after page initialization too.
+window.addEventListener('load',renderLocalModSpawns);
 
 /* ---------- actors (player + AIs) ---------- */
 const actors=[],kingdoms=[],chat=[],dmgQ=[];let me=null,mode='cam',focus=null,inFlight=0,kid=1;
