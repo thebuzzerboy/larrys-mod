@@ -23,8 +23,13 @@ Sandbox Protocol is a browser-based 3D sandbox project with physics, props, play
 - AI characters with configurable provider/persona settings
 - In-game menus and settings
 - Touch-oriented controls (Android)
+- Experimental local JSON mod loader for custom procedural physics props
 
 Workshop/community sharing and multiplayer are **not confirmed as implemented** in the current source. Please do not assume they are available.
+
+## Experimental local mods
+
+Open **Mods** in the game to import, enable, disable, and remove local JSON mods. Imported mods are stored in the current browser/WebView profile and can add procedural physics props using validated shapes, materials, and existing behavior presets. See [`docs/LOCAL_MODS.md`](docs/LOCAL_MODS.md) and [`mods/examples/neon-crate.json`](mods/examples/neon-crate.json) for the format and example. This first version does not execute mod JavaScript or load external model/texture/audio files.
 
 ## Windows build (GitHub Actions)
 
