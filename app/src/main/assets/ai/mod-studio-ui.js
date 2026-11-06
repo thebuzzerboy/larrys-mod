@@ -17,13 +17,13 @@ function start(){
  }
  async function resources(){
   const files=Array.from($("msFiles").files),items=window.SandboxModStudio.inspectResources(files),notes=$("msNotes").value.trim();
-  const textual=/\\.(json|md|txt|js|ts)$/i;
+  const textual=/\.(json|md|txt|js|ts)$/i;
   return Promise.all(items.map(async(item,i)=>{
     let excerpt="";
     if(textual.test(files[i].name)){
       excerpt=await new Promise(resolve=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result||"").slice(0,12000));reader.onerror=()=>resolve("[Could not read text resource]");reader.readAsText(files[i])});
     }
-    return Object.assign(item,{description:[notes,excerpt].filter(Boolean).join("\\n\\n").slice(0,14000)});
+    return Object.assign(item,{description:[notes,excerpt].filter(Boolean).join("\n\n").slice(0,14000)});
   }));
 }
  function validate(){const raw=JSON.parse($("msOutput").value),mod=window.SandboxModStudio.validateMod(raw);$("msOutput").value=JSON.stringify(mod,null,2);status("Package valid · "+mod.items.length+" item(s) · "+mod.items.filter(x=>x.script).length+" scripted item(s)");return mod}
