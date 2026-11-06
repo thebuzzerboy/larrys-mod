@@ -1,0 +1,36 @@
+name: Build Sandbox Protocol for Windows
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'app/src/main/assets/index.html'
+      - 'electron/**'
+      - 'scripts/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/windows-build.yml'
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Install dependencies
+        run: npm install
+      - name: Build Windows installer and portable app
+        run: npm run dist:win
+      - name: Upload Windows builds
+        uses: actions/upload-artifact@v4
+        with:
+          name: sandbox-protocol-windows
+          path: |
+            dist/*.exe
+            dist/*.blockmap
+            dist/latest.yml
+          if-no-files-found: error
