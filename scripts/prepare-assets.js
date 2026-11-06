@@ -17,6 +17,9 @@ html = html.replace(
 );
 fs.writeFileSync(path.join(outDir, 'index.html'), html, 'utf8');
 
+const aiSource = path.join(root, 'app', 'src', 'main', 'assets', 'ai');
+fs.cpSync(aiSource, path.join(outDir, 'ai'), { recursive: true });
+
 const threePath = require.resolve('three/build/three.min.js');
 const cannonPath = require.resolve('cannon/build/cannon.min.js');
 fs.copyFileSync(threePath, path.join(vendorDir, 'three.min.js'));
