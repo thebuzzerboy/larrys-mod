@@ -118,7 +118,7 @@ button:active,button.on{background:var(--or);color:#111;border-color:var(--or)}
   <label>Graphics<select id="kQ"><option value="low">Low (fastest)</option><option value="med">Medium</option><option value="high">High (shadows)</option></select></label>
   <label>AI think speed<select id="kPace"><option value="fast">Fast (about 4 s)</option><option value="norm">Normal (about 8 s)</option><option value="slow">Slow (about 15 s)</option></select></label>
   <label style="flex-direction:row;align-items:center;gap:8px"><input id="kSpy" type="checkbox"> Show AI whispers (spy mode)</label>
-  <small>Choose the API format your proxy actually supports. Custom JSON mode lets you define the request body with {{model}}, {{system}}, {{user}} and {{messages}} placeholders, plus a dot-separated response text path. Each AI can override its connection. API keys are kept only in memory for this session and are not saved.</small>
+  <small>Choose the API format your proxy actually supports. Custom JSON mode lets you define the request body with {{model}}, {{system}}, {{user}} and {{messages}} placeholders, plus a dot-separated response text path. Each AI can override its connection. API keys are kept only in memory for this session and are not saved. LoreLLM external API currently documents 200 requests per day shared across the account; several autonomous bots can use that allowance quickly.</small>
   <button id="kClose" class="on">Save</button>
 </div></div>
 <div id="ai" class="modal" hidden><div>
