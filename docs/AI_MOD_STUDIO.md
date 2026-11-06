@@ -4,7 +4,7 @@ This branch is a developer-only experiment. It does not enable StarCoder2 in con
 
 ## Current architecture
 - mod-studio-core.js contains package validation, an OpenAI-compatible local StarCoder2 adapter, source-aware prompt builder, resource-file classification, and an isolated iframe script runner.
-- StarCoder2 connects to a local OpenAI-compatible inference endpoint. Default: http://127.0.0.1:8080/v1. The endpoint must be supplied by a separately installed local inference server; the game does not install or launch it.
+- StarCoder2 connects to a local OpenAI-compatible inference endpoint. Default: http://127.0.0.1:8080/v1. The endpoint must be supplied by a separately installed local inference server; the game does not install or launch it. The server must accept browser-origin requests from the game (CORS), otherwise the browser will block the connection.
 - docs/GAME_KNOWLEDGE.md is the initial reviewed knowledge file. npm run knowledge:build inventories source files, but an inventory is not a semantic knowledge base.
 - Recognized resource types: GLB/GLTF/OBJ, PNG/JPG/WEBP, WAV/OGG/MP3, JSON, Markdown, text and source files. Up to eight resources can be selected. Text, Markdown, JSON and source files are read (up to 12 KiB each), then bounded excerpts are added to the generation prompt. Binary resources are catalogued by metadata and user notes only; their contents are not interpreted, persisted or rendered.
 
