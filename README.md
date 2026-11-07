@@ -60,13 +60,29 @@ Open **Setup** in the game and choose **Multi-AI strategy**:
 
 Both providers use OpenAI-compatible `/chat/completions` endpoints. Configure a reviewer only if you have access to another provider or proxy. Never commit API keys.
 
-## StarCoder2 model download (opt-in)
+## StarCoder2 local mod workshop (opt-in, experimental)
 
-StarCoder2 7B GGUF Q4_K_M is an optional model download (about 4.5 GB); it is **not included in the installer/APK and is never auto-downloaded**. After installing the game, a user may explicitly run:
+StarCoder2 7B GGUF Q4_K_M is an optional model file (roughly 4.5 GB). It is **not bundled in the game and is never downloaded automatically**. Run the model downloader only after installing Sandbox Protocol:
 - Windows PowerShell: `scripts/ai/download-starcoder2-windows.ps1`
-- Android: `scripts/ai/download-starcoder2-android-termux.sh` from Termux (Android shell script)
+- Android Termux: `scripts/ai/download-starcoder2-android-termux.sh`
 
-Each script asks the user to type `YES` before downloading and saves the model into a user-owned models directory. Android needs Termux with curl. These scripts download weights only. A compatible llama.cpp inference runtime and game-side local-mod-generation integration are still required before the downloaded StarCoder2 file can generate mods in-game; the download alone does not activate a local AI. Model download is separate from the Workshop beta and does not alter game installation files.
+The game now has a **Local Mods** panel: connect it to a local OpenAI-compatible llama.cpp server, test the endpoint, prompt the model to create a resource pack, review its JSON, spawn it, or import/export `.spmod.json` packs. Generated/imported packs are validated and restricted to non-executable primitive prop resources; this is a resource-mod workflow, not arbitrary JavaScript execution.
+
+### Start local inference
+
+**Windows**
+1. Install a compatible llama.cpp `llama-server.exe` separately; the executable is not included in the game. Put it at `%LOCALAPPDATA%\\SandboxProtocol\\AI\\runtime\\llama-server.exe`.
+2. Run `scripts/ai/start-starcoder2-windows.ps1`. It binds to `127.0.0.1:8080` only, CPU-only with 3 threads and a modest 2048-token context.
+3. Open the game → **Local Mods** → **Test connection**. Endpoint defaults to `http://127.0.0.1:8080/v1`.
+
+**Android**
+1. Use a maintained Termux installation on a supported 64-bit Android device. Run the model downloader from Termux.
+2. Run `scripts/ai/start-starcoder2-android-termux.sh`. If `llama-server` is missing, the script asks whether to install Termux's `llama-cpp` package.
+3. Keep Termux open while generating. In the game's **Local Mods** panel, test `http://127.0.0.1:8080/v1`.
+
+The server binds to loopback only. Do not change it to listen on public or shared Wi-Fi. The 7B model needs substantial RAM and will be slow on low-end CPUs; a successful download does not guarantee that a device can run it. Older Android versions/devices may not support current Termux packages.
+
+These model and runtime downloads are independent of the Android Workshop beta. No in-game automatic download or native bundled runtime is provided.
 
 ## AI provider configuration & security
 
