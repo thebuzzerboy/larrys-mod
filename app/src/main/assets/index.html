@@ -149,7 +149,7 @@ try{Object.assign(S,JSON.parse(localStorage.getItem('lm4')||'{}'))}catch(e){}
 // API keys are session-only: never load or persist secrets in localStorage.
 if(S.preset==='gemini'&&S.url===PRE.gemini[0]&&S.model===PRE.gemini[1]){S.preset='openrouter';S.url=PRE.openrouter[0];S.model=PRE.openrouter[1]}
 S.key='';if(Array.isArray(S.agents))S.agents.forEach(a=>{if(a)a.key=''});
-const save=()=>{try{const safe={...S,key:'',agents:Array.isArray(S.agents)?S.agents.map(a=>({...a,key:''})):S.agents};localStorage.setItem('lm4',JSON.stringify(safe))}catch(e){}};
+const save=()=>{try{const safe={...S,key:'',reviewKey:'',agents:Array.isArray(S.agents)?S.agents.map(a=>({...a,key:''})):S.agents};localStorage.setItem('lm4',JSON.stringify(safe))}catch(e){}};
 
 /* ---------- scene ---------- */
 const cv=$('c');let R;try{R=new THREE.WebGLRenderer({canvas:cv,antialias:false,powerPreference:'high-performance'});}catch(err){document.body.innerHTML='<div style="padding:24px;color:white;background:#171a20;font:16px Arial"><h2>Graphics could not start</h2><p>WebGL is unavailable or blocked by this browser/device.</p><pre>'+String(err&&err.message||err)+'</pre></div>';throw err;}
