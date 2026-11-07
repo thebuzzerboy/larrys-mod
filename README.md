@@ -52,6 +52,22 @@ The outputs are placed in `dist/`.
 
 This is a debug APK, not a Play Store-signed release.
 
+## Multi-AI configuration (experimental)
+
+Open **Setup** in the game and choose **Multi-AI strategy**:
+- **Single provider** keeps the existing one-provider path.
+- **Primary + AI reviewer** sends the initial structured response to the primary provider, asks the configured reviewer to critique it, then asks the primary provider to revise using that critique. This is slower and uses extra API calls. Reviewer endpoint/model/key are optional and the reviewer key is session-only.
+
+Both providers use OpenAI-compatible `/chat/completions` endpoints. Configure a reviewer only if you have access to another provider or proxy. Never commit API keys.
+
+## StarCoder2 model download (opt-in)
+
+StarCoder2 7B GGUF Q4_K_M is an optional model download (about 4.5 GB); it is **not included in the installer/APK and is never auto-downloaded**. After installing the game, a user may explicitly run:
+- Windows PowerShell: `scripts/ai/download-starcoder2-windows.ps1`
+- Android: `scripts/ai/download-starcoder2-android-termux.sh` from Termux (Android shell script)
+
+Each script asks the user to type `YES` before downloading and saves the model into a user-owned models directory. Android needs Termux with curl. These scripts download weights only. A compatible llama.cpp inference runtime and game-side local-mod-generation integration are still required before the downloaded StarCoder2 file can generate mods in-game; the download alone does not activate a local AI. Model download is separate from the Workshop beta and does not alter game installation files.
+
 ## AI provider configuration & security
 
 AI provider settings are configured inside the game. Never commit API keys to this repository, embed a private key into a distributable, or post keys in issues/chats. Direct provider requests from a browser/WebView may be affected by CORS or provider policies; a private HTTPS proxy is the more reliable production architecture.
