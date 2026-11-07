@@ -3,6 +3,9 @@ const MAX_MULTIPART_BYTES = MAX_UPLOAD_BYTES + 256 * 1024;
 const MAX_NAME_LENGTH = 80;
 const MAX_DESCRIPTION_LENGTH = 500;
 const MAX_TAGS = 8;
+const MAX_TAG_INPUT_LENGTH = 1024;
+const MAX_PENDING_ROOM_TICKETS = 64;
+const MAX_PENDING_USER_TICKETS = 4;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const MAX_AI_BODY_BYTES = 64 * 1024;
 const MAX_AI_MESSAGES = 32;
@@ -263,8 +266,11 @@ export async function validateWorkshopFileContent(file) {
       if (!document.asset || document.asset.version !== "2.0") return "Only glTF 2.0 documents are supported.";
       if ((document.buffers != null && !Array.isArray(document.buffers)) || (document.images != null && !Array.isArray(document.images))) return "Invalid glTF buffers or images list.";
       for (const entry of [...(document.buffers || []), ...(document.images || [])]) {
-        if (!entry || typeof entry !== "object") return "Invalid glTF resource entry.";
-        if (entry.uri && !entry.uri.startsWith("data:")) return "Single-file glTF uploads cannot reference external files; use GLB or embedded data URIs.";
+        if (!entry || typeof entry !== "object" || Array.isArray(entry)) return "Invalid glTF resource entry.";
+        if (entry.uri != null) {
+          if (typeof entry.uri !== "string") return "glTF resource URI must be text.";
+          if (!entry.uri.startsWith("data:")) return "Single-file glTF uploads cannot reference external files; use GLB or embedded data URIs.";
+        }
       }
     }
   }
@@ -369,6 +375,12 @@ async function workshopUpload(request, env) {
   const validationError = await validateWorkshopFileContent(file);
   if (validationError) return json({ error: validationError }, 400);
 
+  const tagsField = form.get("tags");
+  if (tagsField != null && typeof tagsField !== "string") return json({ error: "Tags must be text." }, 400);
+  if (typeof tagsField === "string" && tagsField.length > MAX_TAG_INPUT_LENGTH) {
+    return json({ error: "Tags are limited to 1024 characters." }, 400);
+  }
+
   let name;
   let description;
   let category;
@@ -391,7 +403,7 @@ async function workshopUpload(request, env) {
     name,
     description,
     category: category.toLowerCase(),
-    tags: normalizeTags(form.get("tags")),
+    tags: normalizeTags(tagsField),
     ownerId: user.id,
     fileName,
     size: file.size,
@@ -529,7 +541,28 @@ export class WorkshopRoom {
 
   async issueTicket(userId) {
     const ticket = crypto.randomUUID();
-    await this.state.storage.put("ticket:" + ticket, { userId, expiresAt: Date.now() + 30_000 });
+    const now = Date.now();
+    const expiresAt = now + 30_000;
+    const result = await this.state.storage.transaction(async (transaction) => {
+      const pending = await transaction.list({ prefix: "ticket:", limit: MAX_PENDING_ROOM_TICKETS + 1 });
+      let total = 0;
+      let userTotal = 0;
+      let alarmAt = expiresAt;
+      for (const [key, record] of pending) {
+        if (!record || !Number.isFinite(record.expiresAt) || record.expiresAt <= now || typeof record.userId !== "string") {
+          await transaction.delete(key);
+          continue;
+        }
+        total++;
+        if (record.userId === userId) userTotal++;
+        alarmAt = Math.min(alarmAt, record.expiresAt);
+      }
+      if (total >= MAX_PENDING_ROOM_TICKETS || userTotal >= MAX_PENDING_USER_TICKETS) return { created: false };
+      await transaction.put("ticket:" + ticket, { userId, expiresAt });
+      return { created: true, alarmAt };
+    });
+    if (!result.created) return null;
+    await this.state.storage.setAlarm(result.alarmAt);
     return ticket;
   }
 
@@ -544,6 +577,21 @@ export class WorkshopRoom {
     });
   }
 
+  async alarm() {
+    const now = Date.now();
+    const pending = await this.state.storage.list({ prefix: "ticket:" });
+    let nextAlarm = Infinity;
+    for (const [key, record] of pending) {
+      if (!record || !Number.isFinite(record.expiresAt) || record.expiresAt <= now || typeof record.userId !== "string") {
+        await this.state.storage.delete(key);
+      } else {
+        nextAlarm = Math.min(nextAlarm, record.expiresAt);
+      }
+    }
+    if (Number.isFinite(nextAlarm)) await this.state.storage.setAlarm(nextAlarm);
+    else if (this.state.storage.deleteAlarm) await this.state.storage.deleteAlarm();
+  }
+
   async fetch(request) {
     const url = new URL(request.url);
     if (url.pathname === "/ticket" && request.method === "POST") {
@@ -551,6 +599,7 @@ export class WorkshopRoom {
       try { body = await request.json(); } catch { return json({ error: "Invalid ticket request." }, 400); }
       if (!body || typeof body.userId !== "string" || !body.userId || body.userId.length > 128) return json({ error: "Invalid ticket request." }, 400);
       const ticket = await this.issueTicket(body.userId);
+      if (!ticket) return json({ error: "Too many pending room tickets. Wait for existing tickets to expire." }, 429);
       return json({ ticket, expiresIn: 30 }, 201, { "cache-control": "no-store" });
     }
     if (request.headers.get("Upgrade") !== "websocket") return new Response("WebSocket upgrade required.", { status: 426 });
@@ -622,6 +671,7 @@ async function route(request, env) {
 
   const roomMatch = url.pathname.match(/^\/api\/rooms\/([a-zA-Z0-9_-]{3,48})$/);
   if (roomMatch && request.headers.get("Upgrade") === "websocket") {
+    if (!originAllowed(request, env)) return json({ error: "WebSocket origin is not allowed." }, 403);
     if (!env.ROOMS) return json({ error: "Multiplayer rooms are not configured." }, 503);
     const ticket = url.searchParams.get("ticket");
     if (!ticket || !UUID_PATTERN.test(ticket)) return json({ error: "A short-lived room ticket is required." }, 401);
