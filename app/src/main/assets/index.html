@@ -454,7 +454,7 @@ async function llm(sys,user,cfg){
   }
   return parsed;
 }
-const SPEC='{"name":"short name","mass":0.1-200,"bounce":0-1,"static":false,"behavior":"none|explode|rocket|float|magnet|spin|turret|heal","power":0.5-3,"parts":[{"shape":"box|sphere|cylinder|cone|torus","size":[..],"pos":[x,y,z],"rot":[degX,degY,degZ],"color":"#rrggbb","metal":0-1,"rough":0-1,"glow":"#rrggbb (optional)"}]}';
+const SPEC='{"name":"short name","mass":0.1-200,"bounce":0-1,"static":false,"behavior":"none","power":0.5-3,"parts":[{"shape":"box|sphere|cylinder|cone|torus","size":[..],"pos":[x,y,z],"rot":[degX,degY,degZ],"color":"#rrggbb","metal":0-1,"rough":0-1,"glow":"#rrggbb (optional)"}]}';
 const SPEC_DOC='Units are metres, Y is up. Build objects from up to 24 primitive parts centred on the origin, overall size 0.4-8 m, recognisable. Sizes: box=[width,height,depth]; sphere=[diameter]; cylinder and cone=[diameter,height] along Y; torus=[outer diameter,tube thickness] lying flat. pos/rot place and tilt parts. static:true makes it immovable (use for walls, floors, towers, castles). Behaviors: explode (blows up on hard impact or tap), rocket, float, magnet, spin, turret (shoots enemies nearby; never its owner or kingdom mates), heal (heals people close by).';
 async function aiSpawn(txt){
   toast('Building "'+txt+'"');
@@ -746,7 +746,7 @@ $('bAI').onclick=()=>{renderAI();$('ai').hidden=false};$('aClose').onclick=()=>{
    spec.parts.forEach((part,j)=>{if(!part||!allowed.includes(part.shape))throw Error('Prop '+(i+1)+', part '+(j+1)+': unsupported shape');});
    const position=Array.isArray(entry.position)?entry.position:[0,1,0];
    if(position.length!==3||position.some(v=>!Number.isFinite(+v)))throw Error('Prop '+(i+1)+' position must be [x,y,z]');
-   return {spec:{...spec,name:String(spec.name||('Prop '+(i+1))).slice(0,24),parts:spec.parts.slice(0,24)},position:position.map(v=>clamp(v,-55,55))};
+   return {spec:{...spec,name:String(spec.name||('Prop '+(i+1))).slice(0,24),behavior:'none',parts:spec.parts.slice(0,24)},position:position.map(v=>clamp(v,-8,8))};
   });
   return {schema:'sandbox-protocol-local-mod-v1',name,description,createdAt:pack.createdAt||new Date().toISOString(),props};
  };
