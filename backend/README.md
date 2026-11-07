@@ -108,7 +108,7 @@ Upload multipart fields:
 - `name` — required, 1–80 characters.
 - `description` — optional, up to 500 characters.
 - `category` — optional, up to 32 letters, digits, `_` or `-`.
-- `tags` — optional comma-separated tags; at most 8 are retained.
+- `tags` — optional comma-separated tags; input is limited to 1,024 characters and at most 8 normalized tags are retained.
 
 Allowed extensions/MIME types: GLB, single-file glTF 2.0 JSON, OBJ, MTL, PNG, JPG/JPEG, WEBP and JSON. Maximum file size is 25 MiB; multipart overhead is separately bounded. The server checks MIME/extension agreement and basic signatures/structure for supported formats. It does not execute uploaded content.
 
@@ -176,7 +176,7 @@ Current limits: at most 8 configured providers, 20 allowlisted models per provid
 3. The browser opens `wss://<worker>/api/rooms/:roomId?ticket=<ticket>`; this avoids relying on custom Authorization headers, which the browser WebSocket API cannot set.
 4. The Durable Object consumes the ticket once, then accepts the WebSocket.
 
-Rooms currently relay JSON `chat` and `state` packets up to 8 KiB, with at most 16 connected sockets. Room tickets are short-lived and one-use. This is an ephemeral transport primitive only: no matchmaking, persistent world state, authoritative physics, anti-cheat, reconnect/resume, or room discovery is implemented.
+Rooms currently relay JSON `chat` and `state` packets up to 8 KiB, with at most 16 connected sockets. Room tickets are one-use, valid for 30 seconds, limited to 4 pending tickets per user and 64 per room, and expired tickets are removed by a Durable Object alarm. When `ALLOWED_ORIGINS` is configured, browser WebSocket handshakes must match that allowlist; native clients without an `Origin` header are accepted. This is an ephemeral transport primitive only: no matchmaking, persistent world state, authoritative physics, anti-cheat, reconnect/resume, or room discovery is implemented.
 
 ## Security and operational limitations
 
