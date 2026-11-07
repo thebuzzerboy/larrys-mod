@@ -9,4 +9,4 @@ if (!(Test-Path $Server)) { Write-Error "llama-server.exe not found at $Server. 
 Write-Host "Starting local StarCoder2 API at http://127.0.0.1:8080/v1"
 Write-Host "CPU-only mode, 3 threads, 2048 context to reduce memory pressure."
 Write-Host "Keep this terminal open while using Local Mods. Ctrl+C stops the server."
-& $Server --model $Model --host 127.0.0.1 --port 8080 --ctx-size 2048 --threads 3 --n-gpu-layers 0 --cors-origins '*'
+& $Server --model $Model --host 127.0.0.1 --port 8080 --alias starcoder2-7b --ctx-size 2048 --threads 3 --n-gpu-layers 0 --cors-origins '*'
