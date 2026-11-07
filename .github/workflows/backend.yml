@@ -1,0 +1,35 @@
+name: Test Sandbox Protocol backend
+on:
+  push:
+    branches: [ main, master, feature/** ]
+    paths:
+      - 'backend/**'
+      - 'app/src/main/assets/ai/**'
+      - 'scripts/test-ai-coordinator.js'
+      - '.github/workflows/backend.yml'
+  pull_request:
+    paths:
+      - 'backend/**'
+      - 'app/src/main/assets/ai/**'
+      - 'scripts/test-ai-coordinator.js'
+      - '.github/workflows/backend.yml'
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Worker development dependencies
+        working-directory: backend/worker
+        run: npm install
+      - name: Test Worker API, authentication, Workshop, AI gateway and rooms
+        working-directory: backend/worker
+        run: npm test
+      - name: Validate Wrangler bundle without deploying
+        working-directory: backend/worker
+        run: npx wrangler deploy --dry-run --outdir .wrangler/dry-run
+      - name: Test game-side AI coordinator and Worker gateway adapter
+        run: node --test scripts/test-ai-coordinator.js

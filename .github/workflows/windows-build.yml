@@ -2,11 +2,12 @@ name: Build Sandbox Protocol for Windows
 on:
   workflow_dispatch:
   pull_request:
-    branches: [ main, master ]
+    branches: [ main, master, 'feature/**' ]
   push:
-    branches: [ main, master ]
+    branches: [ main, master, 'feature/**' ]
     paths:
       - 'app/src/main/assets/index.html'
+      - 'app/src/main/assets/ai/**'
       - 'electron/**'
       - 'scripts/**'
       - 'package.json'

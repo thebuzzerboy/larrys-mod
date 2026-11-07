@@ -1,0 +1,24 @@
+name = "sandbox-protocol-api"
+main = "src/index.js"
+compatibility_date = "2026-11-06"
+
+[vars]
+# Empty means wildcard CORS for non-cookie bearer-token clients. Set exact origins for web deployments.
+ALLOWED_ORIGINS = ""
+# Optional Supabase Auth integration. Leave empty to keep write/AI/room-ticket endpoints disabled.
+SUPABASE_JWKS_URL = ""
+SUPABASE_ISSUER = ""
+# Non-secret provider allowlist; real API keys belong in AI_PROVIDER_KEYS_JSON secret.
+AI_PROVIDERS_JSON = "[]"
+
+[[r2_buckets]]
+binding = "WORKSHOP_BUCKET"
+bucket_name = "sandbox-protocol-workshop"
+
+[[durable_objects.bindings]]
+name = "ROOMS"
+class_name = "WorkshopRoom"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["WorkshopRoom"]

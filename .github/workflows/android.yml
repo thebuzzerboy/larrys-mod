@@ -2,9 +2,9 @@ name: Build Sandbox Protocol Android APK
 on:
   workflow_dispatch:
   pull_request:
-    branches: [ main, master ]
+    branches: [ main, master, 'feature/**' ]
   push:
-    branches: [ main, master ]
+    branches: [ main, master, 'feature/**' ]
     paths:
       - 'app/**'
       - 'app/build.gradle'

@@ -28,3 +28,37 @@ test("rejects requests with no messages", async () => {
   const ai = new global.SandboxAI.AICoordinator();
   await assert.rejects(() => ai.complete({ messages: [] }), /non-empty/);
 });
+
+test("Worker gateway adapter sends only an account token and provider/model selection", async (t) => {
+  let captured;
+  t.mock.method(global, "fetch", async (url, init) => {
+    captured = { url: String(url), init };
+    return new Response(JSON.stringify({ provider: "openai", model: "gpt-test", text: "gateway answer" }), {
+      status: 200, headers: { "content-type": "application/json" }
+    });
+  });
+  const adapter = global.SandboxAI.workerGateway({
+    baseUrl: "https://backend.example.workers.dev/",
+    provider: "openai",
+    model: "gpt-test",
+    getAccessToken: async () => "short-lived-user-token"
+  });
+  const result = await adapter.complete({ messages: [{ role: "user", content: "hello" }] });
+  assert.equal(captured.url, "https://backend.example.workers.dev/api/ai/chat");
+  assert.equal(new Headers(captured.init.headers).get("authorization"), "Bearer short-lived-user-token");
+  const body = JSON.parse(captured.init.body);
+  assert.equal(body.provider, "openai");
+  assert.equal(body.model, "gpt-test");
+  assert.equal(Object.prototype.hasOwnProperty.call(body, "apiKey"), false);
+  assert.equal(result.text, "gateway answer");
+});
+
+test("Worker gateway adapter refuses to send without an account token", async () => {
+  const adapter = global.SandboxAI.workerGateway({
+    baseUrl: "https://backend.example.workers.dev",
+    provider: "openai",
+    model: "gpt-test",
+    getAccessToken: async () => ""
+  });
+  await assert.rejects(() => adapter.complete({ messages: [{ role: "user", content: "hello" }] }), /access token is required/);
+});
