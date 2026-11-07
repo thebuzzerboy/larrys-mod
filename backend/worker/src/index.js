@@ -3,6 +3,16 @@ const MAX_NAME_LENGTH = 80;
 const MAX_DESCRIPTION_LENGTH = 500;
 const MAX_TAGS = 8;
 const ROOM_ID_PATTERN = /^[a-zA-Z0-9_-]{3,48}$/;
+const MAX_AI_BODY_BYTES = 64 * 1024;
+const MAX_AI_MESSAGES = 32;
+const MAX_AI_INPUT_CHARS = 48 * 1024;
+const MAX_AI_OUTPUT_TOKENS = 1024;
+const AI_PROVIDER_DEFINITIONS = {
+  openai: { keyName: "OPENAI_API_KEY", modelsName: "OPENAI_MODELS" },
+  anthropic: { keyName: "ANTHROPIC_API_KEY", modelsName: "ANTHROPIC_MODELS" },
+  gemini: { keyName: "GEMINI_API_KEY", modelsName: "GEMINI_MODELS" },
+  compatible: { keyName: "COMPATIBLE_API_KEY", modelsName: "COMPATIBLE_MODELS" },
+};
 
 const ALLOWED_ASSETS = new Map([
   [".glb", new Set(["model/gltf-binary", "application/octet-stream"])],
@@ -23,22 +33,27 @@ function json(data, status = 200, headers = {}) {
   });
 }
 
+function originAllowed(request, env) {
+  const origin = request.headers.get("Origin");
+  if (!origin) return true;
+  const allowed = (env.ALLOWED_ORIGINS || "").split(",").map((value) => value.trim()).filter(Boolean);
+  return allowed.length === 0 || allowed.includes(origin);
+}
+
 function corsHeaders(request, env) {
   const origin = request.headers.get("Origin");
-  const configured = (env.ALLOWED_ORIGINS || "").split(",").map((s) => s.trim()).filter(Boolean);
-  const allowed = !origin || configured.length === 0 || configured.includes(origin);
-  return {
-    "access-control-allow-origin": allowed ? (configured.length ? (origin || configured[0]) : "*") : "null",
+  const allowed = (env.ALLOWED_ORIGINS || "").split(",").map((value) => value.trim()).filter(Boolean);
+  const headers = {
     "access-control-allow-methods": "GET,POST,DELETE,OPTIONS",
-    "access-control-allow-headers": "Authorization,Content-Type,X-Workshop-Name,X-Workshop-Description,X-Workshop-Category,X-Workshop-Tags",
+    "access-control-allow-headers": "Authorization,Content-Type",
     "access-control-max-age": "86400",
     "vary": "Origin",
   };
+  if (origin && originAllowed(request, env)) headers["access-control-allow-origin"] = allowed.length ? origin : "*";
+  return headers;
 }
 
 function withCors(response, request, env) {
-  // Cloudflare's WebSocket 101 response must be returned intact; the standard
-  // Response constructor cannot recreate a 101 response or preserve its socket.
   if (response.webSocket) return response;
   const headers = new Headers(response.headers);
   for (const [key, value] of Object.entries(corsHeaders(request, env))) headers.set(key, value);
@@ -48,39 +63,102 @@ function withCors(response, request, env) {
 function decodeBase64Url(value) {
   const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
   const padded = normalized + "=".repeat((4 - normalized.length % 4) % 4);
-  return Uint8Array.from(atob(padded), (c) => c.charCodeAt(0));
+  return Uint8Array.from(atob(padded), (character) => character.charCodeAt(0));
 }
 
-async function verifySupabaseJwt(token, secret) {
-  if (!secret || !token) return null;
+const jwksCache = new Map();
+async function getJwks(url, force = false) {
+  const now = Date.now();
+  const cached = jwksCache.get(url);
+  if (!force && cached && cached.expiresAt > now) return cached.keys;
+  const parsed = new URL(url);
+  if (parsed.protocol !== "https:") throw new Error("JWKS URL must use HTTPS");
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 5000);
+  let response;
+  try {
+    response = await fetch(parsed.toString(), { headers: { accept: "application/json" }, signal: controller.signal });
+  } finally { clearTimeout(timer); }
+  if (!response.ok) throw new Error("JWKS request failed");
+  const body = await response.json();
+  if (!body || !Array.isArray(body.keys) || body.keys.length > 32) throw new Error("Invalid JWKS document");
+  jwksCache.set(url, { keys: body.keys, expiresAt: now + 5 * 60 * 1000 });
+  return body.keys;
+}
+
+export async function verifySupabaseJwt(token, env) {
+  if (!token || token.length > 8192 || !env.SUPABASE_JWKS_URL || !env.SUPABASE_ISSUER) return null;
   try {
     const parts = token.split(".");
     if (parts.length !== 3) return null;
     const header = JSON.parse(new TextDecoder().decode(decodeBase64Url(parts[0])));
     const claims = JSON.parse(new TextDecoder().decode(decodeBase64Url(parts[1])));
-    if (header.alg !== "HS256" || !claims.sub || !claims.exp || claims.exp <= Math.floor(Date.now() / 1000)) return null;
-    if (claims.role !== "authenticated") return null;
-    const key = await crypto.subtle.importKey(
-      "raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["verify"]
-    );
+    if (!header || !["ES256", "RS256"].includes(header.alg) || typeof header.kid !== "string" || header.crit || header.b64 === false) return null;
+    const now = Math.floor(Date.now() / 1000);
+    if (typeof claims.sub !== "string" || !claims.sub || typeof claims.exp !== "number" || claims.exp <= now) return null;
+    if (claims.iss !== env.SUPABASE_ISSUER || claims.role !== "authenticated") return null;
+    const audiences = Array.isArray(claims.aud) ? claims.aud : [claims.aud];
+    if (!audiences.includes("authenticated")) return null;
+    if (typeof claims.iat === "number" && claims.iat > now + 60) return null;
+    if (typeof claims.nbf === "number" && claims.nbf > now + 60) return null;
+
+    let keys = await getJwks(env.SUPABASE_JWKS_URL);
+    let jwk = keys.find((key) => key.kid === header.kid && (!key.use || key.use === "sig"));
+    if (!jwk) {
+      keys = await getJwks(env.SUPABASE_JWKS_URL, true);
+      jwk = keys.find((key) => key.kid === header.kid && (!key.use || key.use === "sig"));
+    }
+    if (!jwk || (jwk.alg && jwk.alg !== header.alg)) return null;
+
+    let importAlgorithm, verifyAlgorithm;
+    if (header.alg === "ES256" && jwk.kty === "EC" && jwk.crv === "P-256") {
+      importAlgorithm = { name: "ECDSA", namedCurve: "P-256" };
+      verifyAlgorithm = { name: "ECDSA", hash: "SHA-256" };
+    } else if (header.alg === "RS256" && jwk.kty === "RSA") {
+      importAlgorithm = { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" };
+      verifyAlgorithm = { name: "RSASSA-PKCS1-v1_5" };
+    } else return null;
+
+    const key = await crypto.subtle.importKey("jwk", jwk, importAlgorithm, false, ["verify"]);
     const valid = await crypto.subtle.verify(
-      "HMAC", key, decodeBase64Url(parts[2]), new TextEncoder().encode(parts[0] + "." + parts[1])
+      verifyAlgorithm,
+      key,
+      decodeBase64Url(parts[2]),
+      new TextEncoder().encode(parts[0] + "." + parts[1]),
     );
-    return valid ? { id: String(claims.sub), role: claims.role } : null;
+    return valid ? { id: claims.sub, role: claims.role } : null;
   } catch {
     return null;
   }
 }
 
 async function requireUser(request, env) {
-  const authorization = request.headers.get("Authorization") || "";
-  const match = authorization.match(/^Bearer\s+(.+)$/i);
+  if (!env.SUPABASE_JWKS_URL || !env.SUPABASE_ISSUER) return { error: "not-configured" };
+  const match = (request.headers.get("Authorization") || "").match(/^Bearer\s+(.+)$/i);
   if (!match) return null;
-  return verifySupabaseJwt(match[1], env.SUPABASE_JWT_SECRET);
+  return verifySupabaseJwt(match[1], env);
 }
 
-function safeText(value, max) {
-  return typeof value === "string" ? value.trim().slice(0, max) : "";
+function safeText(value, max, field) {
+  if (value == null || value === "") return "";
+  if (typeof value !== "string") throw new Error(field + " must be text.");
+  const trimmed = value.trim();
+  if (trimmed.length > max) throw new Error(field + " is limited to " + max + " characters.");
+  return trimmed;
+}
+
+function safeFilename(value) {
+  const leaf = String(value || "asset").split(/[\\/]/).pop();
+  return leaf.replace(/[\u0000-\u001f\u007f"<>]/g, "_").trim().slice(0, 120) || "asset";
+}
+
+function publicMetadata(metadata) {
+  return {
+    id: metadata.id, name: metadata.name, description: metadata.description,
+    category: metadata.category, tags: metadata.tags, fileName: metadata.fileName,
+    size: metadata.size, contentType: metadata.contentType, createdAt: metadata.createdAt,
+    version: metadata.version, assetUrl: "/api/workshop/items/" + metadata.id + "/asset",
+  };
 }
 
 function assetExtension(filename) {
@@ -100,31 +178,69 @@ export function validateWorkshopFile(file) {
   return null;
 }
 
+export async function validateWorkshopFileContent(file) {
+  const typeError = validateWorkshopFile(file);
+  if (typeError) return typeError;
+  const ext = assetExtension(file.name);
+  const head = new Uint8Array(await file.slice(0, 16).arrayBuffer());
+  const ascii = (start, end) => String.fromCharCode(...head.slice(start, end));
+  if (ext === ".png" && !(head[0] === 0x89 && ascii(1, 4) === "PNG" && head[4] === 13 && head[5] === 10 && head[6] === 26 && head[7] === 10)) return "PNG signature is invalid.";
+  if ((ext === ".jpg" || ext === ".jpeg") && !(head[0] === 0xff && head[1] === 0xd8 && head[2] === 0xff)) return "JPEG signature is invalid.";
+  if (ext === ".webp" && !(ascii(0, 4) === "RIFF" && ascii(8, 12) === "WEBP")) return "WebP signature is invalid.";
+  if (ext === ".glb") {
+    const view = new DataView(head.buffer, head.byteOffset, head.byteLength);
+    if (ascii(0, 4) !== "glTF" || view.getUint32(4, true) !== 2 || view.getUint32(8, true) !== file.size) return "GLB header is invalid or not version 2.";
+  }
+  if (ext === ".gltf" || ext === ".json") {
+    let document;
+    try { document = JSON.parse(await file.text()); } catch { return "The JSON file is malformed."; }
+    if (!document || typeof document !== "object") return "The JSON root must be an object or array.";
+    if (ext === ".gltf") {
+      if (!document.asset || document.asset.version !== "2.0") return "Only glTF 2.0 documents are supported.";
+      for (const entry of [...(document.buffers || []), ...(document.images || [])]) {
+        if (entry.uri && !entry.uri.startsWith("data:")) return "Single-file glTF uploads cannot reference external files; use GLB or embedded data URIs.";
+      }
+    }
+  }
+  if (ext === ".obj" || ext === ".mtl") {
+    const sample = new TextDecoder().decode(await file.slice(0, Math.min(file.size, 8192)).arrayBuffer());
+    if (sample.includes("\0")) return "Binary content is not accepted for OBJ/MTL files.";
+    const plausible = ext === ".obj" ? /(^|\n)\s*(v|vn|vt|f|o|g|mtllib|usemtl)\s/m : /(^|\n)\s*(newmtl|Ka|Kd|Ks|Ns|d|Tr|map_Kd|illum)\s/m;
+    if (!plausible.test(sample)) return "The " + ext.slice(1).toUpperCase() + " file does not contain recognizable records.";
+  }
+  return null;
+}
+
 function normalizeTags(value) {
   return String(value || "").split(",").map((tag) => tag.trim().toLowerCase())
     .filter((tag) => /^[a-z0-9 _-]{1,24}$/.test(tag)).slice(0, MAX_TAGS);
 }
 
 async function workshopList(request, env, url) {
-  const limit = Math.min(Math.max(Number(url.searchParams.get("limit")) || 20, 1), 50);
+  if (!env.WORKSHOP_BUCKET) return json({ error: "Workshop storage is not configured." }, 503);
+  const requestedLimit = Number(url.searchParams.get("limit")) || 20;
+  const limit = Math.min(Math.max(Math.floor(requestedLimit), 1), 50);
   const cursor = url.searchParams.get("cursor") || undefined;
   const page = await env.WORKSHOP_BUCKET.list({ prefix: "items/", limit, cursor });
   const items = [];
   for (const object of page.objects) {
     const stored = await env.WORKSHOP_BUCKET.get(object.key);
     if (!stored) continue;
-    try { items.push(await stored.json()); } catch { /* ignore malformed metadata */ }
+    try {
+      const metadata = await stored.json();
+      if (metadata && metadata.id && metadata.assetKey && metadata.assetKey.startsWith("assets/")) items.push(publicMetadata(metadata));
+    } catch { /* Ignore malformed metadata. */ }
   }
   return json({ items, cursor: page.truncated ? page.cursor : null });
 }
 
 async function workshopItem(request, env, id, action) {
-  const key = `items/${id}.json`;
+  const key = "items/" + id + ".json";
   const stored = await env.WORKSHOP_BUCKET.get(key);
   if (!stored) return json({ error: "Workshop item not found." }, 404);
-
   let metadata;
   try { metadata = await stored.json(); } catch { return json({ error: "Invalid item metadata." }, 500); }
+  if (!metadata || metadata.id !== id || typeof metadata.assetKey !== "string" || !metadata.assetKey.startsWith("assets/")) return json({ error: "Invalid item metadata." }, 500);
 
   if (action === "asset") {
     const asset = await env.WORKSHOP_BUCKET.get(metadata.assetKey);
@@ -132,7 +248,7 @@ async function workshopItem(request, env, id, action) {
     const headers = new Headers();
     asset.writeHttpMetadata(headers);
     headers.set("content-length", String(asset.size));
-    headers.set("content-disposition", `attachment; filename="${metadata.fileName.replace(/["\\\\\\r\\n]/g, "_")}"`);
+    headers.set("content-disposition", "attachment; filename=\"" + safeFilename(metadata.fileName).replace(/"/g, "_") + "\"");
     headers.set("x-content-type-options", "nosniff");
     headers.set("cache-control", "public, max-age=300");
     return new Response(asset.body, { headers });
@@ -140,39 +256,46 @@ async function workshopItem(request, env, id, action) {
 
   if (request.method === "DELETE") {
     const user = await requireUser(request, env);
+    if (user?.error === "not-configured") return json({ error: "Authentication is not configured." }, 503);
     if (!user) return json({ error: "Authentication required." }, 401);
     if (metadata.ownerId !== user.id) return json({ error: "You can only delete your own Workshop items." }, 403);
     await env.WORKSHOP_BUCKET.delete(metadata.assetKey);
     await env.WORKSHOP_BUCKET.delete(key);
     return json({ deleted: true, id });
   }
-  return json(metadata);
+  return json(publicMetadata(metadata));
 }
 
 async function workshopUpload(request, env) {
-  const user = await requireUser(request, env);
-  if (!user) return json({ error: "A valid Supabase access token is required." }, 401);
   if (!env.WORKSHOP_BUCKET) return json({ error: "Workshop storage is not configured." }, 503);
-
+  const user = await requireUser(request, env);
+  if (user?.error === "not-configured") return json({ error: "Authentication is not configured." }, 503);
+  if (!user) return json({ error: "A valid Supabase access token is required." }, 401);
+  const contentLength = Number(request.headers.get("Content-Length"));
+  if (Number.isFinite(contentLength) && contentLength > MAX_UPLOAD_BYTES + 256 * 1024) return json({ error: "Upload body exceeds the 25 MiB file limit." }, 413);
   let form;
   try { form = await request.formData(); } catch { return json({ error: "Expected multipart form data." }, 400); }
   const file = form.get("file");
-  const validationError = validateWorkshopFile(file);
+  const validationError = await validateWorkshopFileContent(file);
   if (validationError) return json({ error: validationError }, 400);
 
-  const name = safeText(form.get("name"), MAX_NAME_LENGTH);
-  const description = safeText(form.get("description"), MAX_DESCRIPTION_LENGTH);
-  const category = safeText(form.get("category"), 32) || "other";
+  let name, description, category;
+  try {
+    name = safeText(form.get("name"), MAX_NAME_LENGTH, "Name");
+    description = safeText(form.get("description"), MAX_DESCRIPTION_LENGTH, "Description");
+    category = safeText(form.get("category"), 32, "Category") || "other";
+  } catch (error) { return json({ error: error.message }, 400); }
   if (!name) return json({ error: "Item name is required." }, 400);
+  if (!/^[a-z0-9_-]{1,32}$/i.test(category)) return json({ error: "Invalid category." }, 400);
 
   const id = crypto.randomUUID();
-  const ext = assetExtension(file.name);
-  const assetKey = `assets/${id}${ext}`;
+  const fileName = safeFilename(file.name);
+  const ext = assetExtension(fileName);
+  const assetKey = "assets/" + id + ext;
   const metadata = {
-    id, name, description, category, tags: normalizeTags(form.get("tags")),
-    ownerId: user.id, fileName: safeText(file.name, 120), size: file.size,
-    contentType: file.type || "application/octet-stream", assetKey,
-    createdAt: new Date().toISOString(), version: 1,
+    id, name, description, category: category.toLowerCase(), tags: normalizeTags(form.get("tags")),
+    ownerId: user.id, fileName, size: file.size, contentType: file.type || "application/octet-stream",
+    assetKey, createdAt: new Date().toISOString(), version: 1,
   };
 
   await env.WORKSHOP_BUCKET.put(assetKey, file.stream(), {
@@ -180,14 +303,14 @@ async function workshopUpload(request, env) {
     customMetadata: { itemId: id, ownerId: user.id },
   });
   try {
-    await env.WORKSHOP_BUCKET.put(`items/${id}.json`, JSON.stringify(metadata), {
+    await env.WORKSHOP_BUCKET.put("items/" + id + ".json", JSON.stringify(metadata), {
       httpMetadata: { contentType: "application/json; charset=utf-8" },
     });
   } catch (error) {
     await env.WORKSHOP_BUCKET.delete(assetKey);
     throw error;
   }
-  return json(metadata, 201);
+  return json(publicMetadata(metadata), 201);
 }
 
 export class WorkshopRoom {
