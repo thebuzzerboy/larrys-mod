@@ -1,0 +1,13 @@
+# Optional. Copy to .dev.vars and replace placeholders only if you have configured these services.
+# Supabase Auth public JWKS URL and exact issuer (neither value is a secret).
+SUPABASE_JWKS_URL="https://PROJECT_REF.supabase.co/auth/v1/.well-known/jwks.json"
+SUPABASE_ISSUER="https://PROJECT_REF.supabase.co/auth/v1"
+
+# Non-secret allowlist. Only OpenAI-compatible Chat Completions endpoints are supported.
+AI_PROVIDERS_JSON='[{"id":"openai","endpoint":"https://api.openai.com/v1/chat/completions","models":["gpt-4o-mini"]}]'
+
+# SECRET: put a real key here only in your ignored local .dev.vars file, never in this example or Git.
+AI_PROVIDER_KEYS_JSON='{"openai":"REPLACE_WITH_SERVER_SIDE_KEY"}'
+
+# Set exact origins for a web client. Leave blank only for bearer-token-only packaged clients.
+ALLOWED_ORIGINS=""

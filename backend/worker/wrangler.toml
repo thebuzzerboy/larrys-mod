@@ -3,9 +3,13 @@ main = "src/index.js"
 compatibility_date = "2026-11-06"
 
 [vars]
-# Set ALLOWED_ORIGINS to a comma-separated list of trusted app/web origins.
-# Leave empty for bearer-token-only access from packaged desktop/mobile clients.
+# Empty means wildcard CORS for non-cookie bearer-token clients. Set exact origins for web deployments.
 ALLOWED_ORIGINS = ""
+# Optional Supabase Auth integration. Leave empty to keep write/AI/room-ticket endpoints disabled.
+SUPABASE_JWKS_URL = ""
+SUPABASE_ISSUER = ""
+# Non-secret provider allowlist; real API keys belong in AI_PROVIDER_KEYS_JSON secret.
+AI_PROVIDERS_JSON = "[]"
 
 [[r2_buckets]]
 binding = "WORKSHOP_BUCKET"

@@ -169,8 +169,44 @@
     };
   }
 
+  // Calls the Sandbox Protocol Worker gateway. Provider API keys stay on the server;
+  // the client supplies only a short-lived account access token and provider/model IDs.
+  function workerGateway(options) {
+    options = options || {};
+    if (!options.baseUrl || !/^[a-z0-9_-]{1,32}$/.test(options.provider || "") ||
+        !options.model || typeof options.getAccessToken !== "function") {
+      throw new TypeError("baseUrl, provider, model and getAccessToken are required");
+    }
+    return {
+      complete: async function (request) {
+        const token = await options.getAccessToken();
+        if (typeof token !== "string" || !token) throw new Error("A valid account access token is required for the AI gateway");
+        const response = await fetch(options.baseUrl.replace(/\/$/, "") + "/api/ai/chat", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + token
+          },
+          signal: request.signal,
+          body: JSON.stringify({
+            provider: options.provider,
+            model: options.model,
+            messages: request.messages,
+            max_tokens: options.maxTokens == null ? 512 : options.maxTokens,
+            temperature: options.temperature == null ? 0.7 : options.temperature
+          })
+        });
+        const data = await response.json().catch(function () { return {}; });
+        if (!response.ok) throw new Error((data && data.error) || ("AI gateway returned HTTP " + response.status));
+        if (!data || typeof data.text !== "string") throw new Error("AI gateway returned no message text");
+        return { text: data.text, model: data.model || options.model };
+      }
+    };
+  }
+
   root.SandboxAI = Object.freeze({
     AICoordinator: AICoordinator,
-    openAICompatible: openAICompatible
+    openAICompatible: openAICompatible,
+    workerGateway: workerGateway
   });
 })(typeof window !== "undefined" ? window : globalThis);
