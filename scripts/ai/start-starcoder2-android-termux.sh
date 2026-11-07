@@ -14,4 +14,4 @@ fi
 command -v llama-server >/dev/null 2>&1 || { echo "llama-server still unavailable; check the Termux package install."; exit 1; }
 echo "Starting local StarCoder2 API at http://127.0.0.1:8080/v1"
 echo "CPU-first mode, 2048 context. Keep Termux in foreground; Ctrl+C stops server."
-exec llama-server --model "$MODEL" --host 127.0.0.1 --port 8080 --ctx-size 2048 --threads 4 --n-gpu-layers 0 --cors-origins '*'
+exec llama-server --model "$MODEL" --host 127.0.0.1 --port 8080 --alias starcoder2-7b --ctx-size 2048 --threads 4 --n-gpu-layers 0 --cors-origins '*'
