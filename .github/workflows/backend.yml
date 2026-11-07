@@ -28,5 +28,8 @@ jobs:
       - name: Test Worker API, authentication, Workshop, AI gateway and rooms
         working-directory: backend/worker
         run: npm test
+      - name: Validate Wrangler bundle without deploying
+        working-directory: backend/worker
+        run: npx wrangler deploy --dry-run --outdir .wrangler/dry-run
       - name: Test game-side AI coordinator and Worker gateway adapter
         run: node --test scripts/test-ai-coordinator.js
