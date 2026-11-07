@@ -114,6 +114,10 @@ button:active,button.on{background:var(--or);color:#111;border-color:var(--or)}
   <label style="flex-direction:row;align-items:center;gap:8px"><input id="kAuto" type="checkbox"> AIs act on their own</label>
   <label>Graphics<select id="kQ"><option value="low">Low (fastest)</option><option value="med">Medium</option><option value="high">High (shadows)</option></select></label>
   <label>AI think speed<select id="kPace"><option value="fast">Fast (about 4 s)</option><option value="norm">Normal (about 8 s)</option><option value="slow">Slow (about 15 s)</option></select></label>
+  <label>Multi-AI strategy<select id="kStrategy"><option value="single">Single provider (fast)</option><option value="reviewer">Primary + AI reviewer (more accurate, slower)</option></select></label>
+  <label>Reviewer Base URL<input id="kReviewUrl" type="text" autocapitalize="off" placeholder="OpenAI-compatible /v1 endpoint"></label>
+  <label>Reviewer Model<input id="kReviewModel" type="text" autocapitalize="off" placeholder="Reviewer model ID"></label>
+  <label>Reviewer API key<input id="kReviewKey" type="password" autocomplete="off" placeholder="Optional reviewer key"></label>
   <label style="flex-direction:row;align-items:center;gap:8px"><input id="kSpy" type="checkbox"> Show AI whispers (spy mode)</label>
   <small>Any /chat/completions server works. Each AI can override model, URL and key in the AIs panel. API keys are kept only in memory for this session and are not saved. For production, use a private HTTPS proxy.</small>
   <button id="kClose" class="on">Save</button>
@@ -140,7 +144,7 @@ const PERS={
  Ayla:['#c050e0','An ambitious queen. Found a kingdom early, build a castle with static walls, towers and a throne room, recruit others and defend it.'],
  Brutus:['#d03a2a','An aggressive warlord. Hunt rivals, raid kingdoms, build turrets and trophies, taunt everyone.'],
  Sage:['#3aa86a','A calm architect and healer. Build healing stations, bridges and gardens, make peace and trade advice.']};
-const S={preset:'openrouter',url:PRE.openrouter[0],model:PRE.openrouter[1],key:'',auto:true,agents:null,q:'med',spy:true,pace:'norm'};
+const S={preset:'openrouter',url:PRE.openrouter[0],model:PRE.openrouter[1],key:'',auto:true,agents:null,q:'med',spy:true,pace:'norm',aiStrategy:'single',reviewUrl:'',reviewModel:'',reviewKey:''};
 try{Object.assign(S,JSON.parse(localStorage.getItem('lm4')||'{}'))}catch(e){}
 // API keys are session-only: never load or persist secrets in localStorage.
 if(S.preset==='gemini'&&S.url===PRE.gemini[0]&&S.model===PRE.gemini[1]){S.preset='openrouter';S.url=PRE.openrouter[0];S.model=PRE.openrouter[1]}
@@ -430,6 +434,12 @@ async function llm(sys,user,cfg){
     if(ch==='"'){inStr=true;continue}if(ch==='{')depth++;else if(ch==='}'&&--depth===0){end=i+1;break}}
   if(end<0)throw new Error('The model returned incomplete JSON');
   const parsed=JSON.parse(t.slice(a,end));if(!parsed||typeof parsed!=='object'||Array.isArray(parsed))throw new Error('Invalid AI response object');
+  if(S.aiStrategy==='reviewer'&&cfg.role!=='reviewer'&&S.reviewUrl&&S.reviewModel){
+    try{
+      const review=await llm('You are an independent reviewer of a sandbox AI response. Identify likely JSON schema errors, unsafe/out-of-bounds actions, or better choices. Return ONLY JSON: {"review":"brief actionable critique"}. Do not execute actions.',JSON.stringify({task:user,draft:parsed}),{url:S.reviewUrl,key:S.reviewKey,model:S.reviewModel,role:'reviewer'});
+      if(typeof review.review==='string'&&review.review.trim())return await llm(sys+'\\nUse this reviewer feedback to improve your answer while preserving the required JSON schema: '+review.review,user,{...cfg,role:'reviewer'});
+    }catch(err){toast('AI reviewer unavailable: '+String(err.message).slice(0,65));}
+  }
   return parsed;
 }
 const SPEC='{"name":"short name","mass":0.1-200,"bounce":0-1,"static":false,"behavior":"none|explode|rocket|float|magnet|spin|turret|heal","power":0.5-3,"parts":[{"shape":"box|sphere|cylinder|cone|torus","size":[..],"pos":[x,y,z],"rot":[degX,degY,degZ],"color":"#rrggbb","metal":0-1,"rough":0-1,"glow":"#rrggbb (optional)"}]}';
@@ -678,8 +688,8 @@ async function run(kind){
 }
 $('bSpawn').onclick=()=>run('spawn');$('bChat').onclick=()=>run('chat');$('inp').onkeydown=e=>{if(e.key==='Enter')run('spawn')};
 $('kPre').onchange=()=>{const p=PRE[$('kPre').value];$('kUrl').value=p[0];$('kModel').value=p[1]};
-$('gear').onclick=()=>{$('kPre').value=S.preset;$('kUrl').value=S.url;$('kKey').value=S.key;$('kModel').value=S.model;$('kAuto').checked=S.auto;$('kQ').value=S.q;$('kPace').value=S.pace;$('kSpy').checked=S.spy;$('set').hidden=false};
-$('kClose').onclick=()=>{S.preset=$('kPre').value;S.url=$('kUrl').value.trim();S.key=$('kKey').value.trim();S.model=$('kModel').value.trim();S.auto=$('kAuto').checked;S.q=$('kQ').value;S.pace=$('kPace').value;S.spy=$('kSpy').checked;save();applyQ();$('set').hidden=true;if(paused)$('pauseMenu').hidden=false};
+$('gear').onclick=()=>{$('kPre').value=S.preset;$('kUrl').value=S.url;$('kKey').value=S.key;$('kModel').value=S.model;$('kAuto').checked=S.auto;$('kQ').value=S.q;$('kPace').value=S.pace;$('kSpy').checked=S.spy;$('kStrategy').value=S.aiStrategy||'single';$('kReviewUrl').value=S.reviewUrl||'';$('kReviewModel').value=S.reviewModel||'';$('kReviewKey').value=S.reviewKey||'';$('set').hidden=false};
+$('kClose').onclick=()=>{S.preset=$('kPre').value;S.url=$('kUrl').value.trim();S.key=$('kKey').value.trim();S.model=$('kModel').value.trim();S.auto=$('kAuto').checked;S.q=$('kQ').value;S.pace=$('kPace').value;S.spy=$('kSpy').checked;S.aiStrategy=$('kStrategy').value;S.reviewUrl=$('kReviewUrl').value.trim();S.reviewModel=$('kReviewModel').value.trim();S.reviewKey=$('kReviewKey').value.trim();save();applyQ();$('set').hidden=true;if(paused)$('pauseMenu').hidden=false};
 function saveAgents(){S.agents=actors.filter(a=>a.isAI).map(a=>({name:a.name,color:a.color,persona:a.persona,model:a.model,url:a.url,key:''}));save()}
 function addAgent(c){
   if(actors.filter(a=>a.isAI).length>=4){toast('Max 4 AIs');return}
