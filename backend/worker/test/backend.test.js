@@ -158,6 +158,8 @@ test("checks file signatures and single-file glTF references", async () => {
   assert.equal(await validateWorkshopFileContent(validGlb), null);
   const externalGltf = new File([JSON.stringify({ asset: { version: "2.0" }, buffers: [{ uri: "mesh.bin" }] })], "mesh.gltf", { type: "model/gltf+json" });
   assert.match(await validateWorkshopFileContent(externalGltf), /cannot reference external files/);
+  const malformedGltf = new File([JSON.stringify({ asset: { version: "2.0" }, buffers: [{ uri: 42 }] })], "malformed.gltf", { type: "model/gltf+json" });
+  assert.equal(await validateWorkshopFileContent(malformedGltf), "glTF resource URI must be text.");
 });
 
 test("verifies a valid Supabase ES256 JWT using the configured JWKS", async (t) => {
@@ -183,6 +185,22 @@ test("rejects expired, wrong-issuer, and wrong-audience Supabase JWTs", async (t
   assert.equal(await verifySupabaseJwt(wrongIssuer.token, authEnv(jwksUrl)), null);
   const wrongAudience = await createJwt({ overrides: { aud: "anon" }, keyPair: signed.keyPair });
   assert.equal(await verifySupabaseJwt(wrongAudience.token, authEnv(jwksUrl)), null);
+});
+
+test("upload rejects oversized tags before writing any Workshop objects", async (t) => {
+  const signed = await createJwt();
+  const jwksUrl = "https://jwks-" + crypto.randomUUID() + ".example.test/keys";
+  mockJwks(t, jwksUrl, signed.jwk);
+  const bucket = new MemoryBucket();
+  const form = new FormData();
+  form.set("file", makeGlb());
+  form.set("name", "Test model");
+  form.set("tags", "x".repeat(1025));
+  const response = await worker.fetch(new Request("https://example.test/api/workshop/items", {
+    method: "POST", headers: { authorization: "Bearer " + signed.token }, body: form,
+  }), { ...authEnv(jwksUrl), WORKSHOP_BUCKET: bucket });
+  assert.equal(response.status, 400);
+  assert.equal(bucket.objects.size, 0);
 });
 
 test("uploads, lists, downloads, and owner-deletes a validated Workshop asset", async (t) => {
@@ -276,13 +294,23 @@ test("AI gateway rejects unauthenticated requests before contacting a provider",
   assert.equal(response.status, 401);
 });
 
-test("issues one-use, short-lived Durable Object room tickets", async () => {
+test("issues one-use tickets, caps pending tickets, and cleans expired tickets", async () => {
   const records = new Map();
+  let alarmAt = null;
+  const list = async ({ prefix, limit } = {}) => new Map(
+    [...records.entries()].filter(([key]) => !prefix || key.startsWith(prefix)).slice(0, limit || Infinity),
+  );
   const storage = {
+    list,
     put: async (key, value) => records.set(key, value),
+    delete: async (key) => records.delete(key),
+    setAlarm: async (time) => { alarmAt = time; },
+    deleteAlarm: async () => { alarmAt = null; },
     transaction: async (callback) => callback({
       get: async (key) => records.get(key),
+      put: async (key, value) => records.set(key, value),
       delete: async (key) => records.delete(key),
+      list,
     }),
   };
   const room = new WorkshopRoom({ storage, getWebSockets: () => [] });
@@ -296,8 +324,16 @@ test("issues one-use, short-lived Durable Object room tickets", async () => {
   const stored = records.get("ticket:" + ticket);
   assert.equal(stored.userId, "user-42");
   assert.ok(stored.expiresAt > Date.now());
+  assert.ok(alarmAt >= stored.expiresAt - 30_000);
   assert.deepEqual(await room.consumeTicket(ticket), stored);
   assert.equal(await room.consumeTicket(ticket), null);
+
+  for (let index = 0; index < 4; index++) assert.equal(typeof await room.issueTicket("user-42"), "string");
+  assert.equal(await room.issueTicket("user-42"), null);
+  for (const record of records.values()) record.expiresAt = Date.now() - 1;
+  await room.alarm();
+  assert.equal(records.size, 0);
+  assert.equal(alarmAt, null);
 });
 
 test("authenticated room ticket endpoint forwards identity to its Durable Object", async (t) => {
@@ -339,6 +375,28 @@ test("room WebSocket route forwards a ticket without requiring browser WebSocket
   }), env);
   assert.equal(response.status, 200);
   assert.equal(new URL(forwarded.url).searchParams.get("ticket"), "123e4567-e89b-42d3-a456-426614174000");
+});
+
+test("room WebSocket route rejects unlisted browser origins before forwarding", async () => {
+  let forwarded = false;
+  const env = {
+    ALLOWED_ORIGINS: "https://game.example",
+    ROOMS: {
+      idFromName: (name) => name,
+      get: () => ({ fetch: async () => { forwarded = true; return new Response("forwarded"); } }),
+    },
+  };
+  const denied = await worker.fetch(new Request("https://example.test/api/rooms/lobby-1?ticket=123e4567-e89b-42d3-a456-426614174000", {
+    headers: { upgrade: "websocket", origin: "https://attacker.example" },
+  }), env);
+  assert.equal(denied.status, 403);
+  assert.equal(forwarded, false);
+
+  const allowed = await worker.fetch(new Request("https://example.test/api/rooms/lobby-1?ticket=123e4567-e89b-42d3-a456-426614174000", {
+    headers: { upgrade: "websocket", origin: "https://game.example" },
+  }), env);
+  assert.equal(allowed.status, 200);
+  assert.equal(forwarded, true);
 });
 
 test("room relay forwards only chat/state packets and closes oversized messages", () => {
